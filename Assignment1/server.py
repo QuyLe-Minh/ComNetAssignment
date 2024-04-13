@@ -1,7 +1,4 @@
-import os
-import re
-from utilities.utils import *
-import json
+from utilities import *
 import threading
 import urllib
 import struct
@@ -22,7 +19,7 @@ class Server:
         self.incomplete = 0
         self.interval = 60
         self.min_interval = 60
-        self.peers = socket.inet_aton('192.168.1.1')+ struct.pack('!H', 20386)
+        self.peers = socket.inet_aton(get_local_ip())+ struct.pack('!H', LOCAL_PORT)
         
     def add_peer(self, addr):
         ip, port = addr

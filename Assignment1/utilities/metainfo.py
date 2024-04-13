@@ -1,5 +1,5 @@
 import hashlib
-from bencode import Bencode
+from utilities import Bencode
 
 class MetaInfo:
     def __init__(self, data):

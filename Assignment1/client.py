@@ -1,16 +1,32 @@
 from utilities import *
+import threading
     
 
-class Client:
+class Seeder:
     DEFAULT_SERVER_PORT = 55555
     
     def __init__(self):
         self.server_host = get_local_ip()
         self.server_port = self.DEFAULT_SERVER_PORT
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.main_seeder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.main_seeder.bind((get_local_ip(), LOCAL_PORT))     #static one, may change later
+        self.main_seeder.settimeout(1)
+        self.main_seeder.listen()
+    
+    def handle_handshake(self, conn, addr):
+        request = conn.recv(1024).decode()
+        
+        pass
         
     def connect_to_server(self):
-        self.client_socket.connect((self.server_host, self.server_port))
+        while True:
+            try:
+                conn, addr = self.main_seeder.accept()
+                print("HI CLIENT")
+                thread = threading.Thread(target=self.handle_handshake, args=(conn, addr))
+                thread.start()
+            except:
+                pass
     
 def handle_download_piece(download_directory, torrent_file_name, piece):
     # extract the meta info from the torrent file
