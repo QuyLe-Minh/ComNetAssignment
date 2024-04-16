@@ -5,10 +5,10 @@ import struct
 
 class Server:
     def __init__(self):
-        self.port = 55555
+        self.port = 62699
         self.host = get_local_ip()
         print(f"Server IP: {self.host}")
-        print("Server is listening on port 55555...")
+        print(f"Server is listening on port {self.port}...")
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Bind the server to the host and port
         self.server.bind((self.host, self.port))
