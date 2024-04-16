@@ -155,5 +155,3 @@ def create_torrent_file(file_path, tracker_url, piece_length=262144):  # Default
 
     print(f'Torrent file created: {torrent_file_name}')
     
-if __name__ == "__main__":
-    create_torrent_file("swe.pdf", f"http://192.168.2.87:55555/announce")
