@@ -5,7 +5,7 @@ import struct
 
 class Server:
     def __init__(self):
-        self.port = 62699
+        self.port = SERVER_PORT
         self.host = get_local_ip()
         print(f"Server IP: {self.host}")
         print(f"Server is listening on port {self.port}...")

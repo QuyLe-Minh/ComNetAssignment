@@ -15,6 +15,8 @@ class Seeder:
         self.main_seeder.settimeout(1)
         self.main_seeder.listen()
 
+        self.file_path = FILE_PATH
+
         self.pieces = []
     
     def parse_request(self, request):
@@ -48,7 +50,13 @@ class Seeder:
 
     def seeding(self, conn, addr):
         print("Seeding...")
-        
+        with open(self.file_path, "rb") as f:
+            while True:
+                piece = f.read(262144)
+                if not piece:
+                    break
+                conn.sendall(hashlib.sha1(piece).digest())
+        conn.close()
         
     def listening(self):
         while True:
