@@ -90,10 +90,13 @@ class Peer:
         handshake_msg = (
             self.protocol_length + self.protocol + self.reserved + info_hash + peer_id
         )
+        print(self.protocol_length,self.protocol,self.reserved,info_hash,peer_id)
+        print(handshake_msg)
 
         self.socket.sendall(handshake_msg)  # send the handshake message
         response = self.socket.recv(68)  # receive the handshake response
         connected_peer_id = response[48:]
+        print(connected_peer_id)
         return connected_peer_id
     """
     The choke message is used to notify the peer that the client is not interested in downloading pieces from the peer.
@@ -452,6 +455,7 @@ def handle_handshake(torrent_file_name, peer_ip_with_port):
 
     peer.connect(peer_ip, peer_port)
     connected_peer_id = peer.handshake(meta_info.info_hash, MY_PEER_ID)
+    print(connected_peer_id)
     print(f"Peer ID: {connected_peer_id.hex()}")
 def main():
     command = sys.argv[1]

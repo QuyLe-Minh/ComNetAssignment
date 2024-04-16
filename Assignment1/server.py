@@ -29,10 +29,8 @@ class Server:
     def handle_client_request(self, conn, addr):
         self.add_peer(addr)
         request = conn.recv(1024).decode()
-        parts = request.split(" ")
-        _, url, _ = parts[0], parts[1], parts[2]
-        parsed_url = urllib.parse.urlparse(url)
-        params = urllib.parse.parse_qs(parsed_url.query)    # I dunno wtf is this
+        GET_request = request.split(" ")[1]
+        request_params = urllib.parse.parse_qs(urllib.parse.urlparse(request).query)
         
         param = {
             "complete": self.complete,
