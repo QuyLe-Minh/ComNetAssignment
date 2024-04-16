@@ -43,9 +43,12 @@ class Seeder:
         piece = None
         if piece in self.pieces:
             self.unchoke_send(conn, addr)
-            conn.close()
-            return
-        pass
+            
+        conn.close()
+
+    def seeding(self, conn, addr):
+        print("Seeding...")
+        
         
     def listening(self):
         while True:
@@ -54,6 +57,9 @@ class Seeder:
                 print("HI PEER")
                 thread = threading.Thread(target=self.handle_handshake, args=(conn, addr))
                 thread.start()
+
+                thread2 = threading.Thread(target=self.seeding, args=(conn, addr))
+                thread2.start()
             except:
                 pass
     
