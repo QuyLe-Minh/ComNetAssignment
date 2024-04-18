@@ -45,7 +45,6 @@ class Seeder:
             bitfield |= 1 << (7-i)
             
         conn.send(bitfield.to_bytes(1, byteorder="big"))
-        conn.close()
 
     def unchoke_send(self, conn, addr):
         pass
