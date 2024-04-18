@@ -46,7 +46,6 @@ class Server:
         
     def handle_client_request(self, conn, addr):
         request = conn.recv(1024).decode()
-        print(request)
         command = request.split(" ")[0]
         if command == "GET":
             self.handle_get_request(conn, addr, request)

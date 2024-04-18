@@ -7,9 +7,11 @@ from utilities import *
 
 
 if __name__ == "__main__":
-    ip = get_local_ip()
-    print(ip)
-    create_torrent_file("swe.pdf", f"http://{ip}:{SERVER_PORT}/announce")
+    n = 1
+    print(n.to_bytes(4, byteorder="big"))
+    # ip = get_local_ip()
+    # print(ip)
+    # create_torrent_file("swe.pdf", f"http://{ip}:{SERVER_PORT}/announce")
 
 # peer = socket.inet_aton('192.168.1.1') + struct.pack('!H', 6881) + socket.inet_aton('192.168.1.3') + struct.pack('!H', 55555)
 # print(get_peer_ip(peer[6:]))

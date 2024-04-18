@@ -1,3 +1,9 @@
+#
+#
+# THIS FILE IS NO RELEVANT TO THIS REPO
+#
+#
+
 import json
 import os
 import sys
@@ -17,7 +23,7 @@ BITFIELD_ID = 5
 REQUEST_ID = 6
 PIECE_ID = 7
 CANCEL_ID = 8
-MY_PEER_ID = b"00112233445566778899"
+MY_PEER_ID = b"00112233445566778899"    #string of length 20, identifier for client
 BLOCK_SIZE = 2**14  # 16KB
 class PeerMessage:
     def __init__(self, message_id: bytes, payload: bytes):
@@ -34,6 +40,7 @@ class PeerMessage:
         }
     def get_encoded(self):
         return self.message_length_prefix + self.message_id + self.payload
+    
 class Tracker:
     def __init__(self, announce_url):
         self.announce_url = announce_url
@@ -41,7 +48,7 @@ class Tracker:
         self,
         info_hash: bytes,
         peer_id: str,
-        port: int = 6881,
+        port: int = 55555,
         uploaded: int = 0,
         downloaded: int = 0,
         left: int = 0,
@@ -59,7 +66,8 @@ class Tracker:
                 "compact": compact,
             },
         )
-        return response
+        return response #type->bytes
+    
 class Peer:
     def __init__(self):
         self.protocol = b"BitTorrent protocol"  # 19 bytes
@@ -86,14 +94,12 @@ class Peer:
             raise ValueError("info_hash must be 20 bytes long")
         if len(peer_id) != 20:
             raise ValueError("peer_id must be 20 bytes long")
-
         handshake_msg = (
             self.protocol_length + self.protocol + self.reserved + info_hash + peer_id
         )
         self.socket.sendall(handshake_msg)  # send the handshake message
         response = self.socket.recv(68)  # receive the handshake response
         connected_peer_id = response[48:]
-        #ID response will be ID of the seeder
         return connected_peer_id
     """
     The choke message is used to notify the peer that the client is not interested in downloading pieces from the peer.
@@ -178,6 +184,7 @@ class Peer:
             raise ValueError(f"Invalid message id: {message_id} for bitfield message")
         payload = self.socket.recv(length - 1)
         payload_str = "".join(format(x, "08b") for x in payload)
+        # print(payload_str)
         indexes_of_pieces = [i for i, bit in enumerate(payload_str) if bit == "1"]
         return indexes_of_pieces
     """
@@ -234,6 +241,7 @@ class Peer:
             recieved += len(block)
         print(f"Recieved: {recieved} - Size: {size_of_block}")
         return piece_index, begin, full_block
+    
     def cancel(self):
         pass
 class MetaInfo:
@@ -244,10 +252,10 @@ class MetaInfo:
         self.files = None  # multi files case
         self.piece_length = self.info["piece length"]
         self.pieces = self.info["pieces"]
-        self.info_hash = hashlib.sha1(Bencode.encode(self.info)).digest()
-        self.info_hash_hex = self.info_hash.hex()
+        self.info_hash = hashlib.sha1(Bencode.encode(self.info)).digest()   #the actual hash value of the data and returns it as a bytes object.
+        self.info_hash_hex = self.info_hash.hex()   #from bytes to hexadecimal
     def get_piece_hashes(self):
-        return [self.pieces[i : i + 20].hex() for i in range(0, len(self.pieces), 20)]
+        return [self.pieces[i : i + 20].hex() for i in range(0, len(self.pieces), 20)]  #20 bytes/piece
 class Bencode:
     def __init__(self):
         pass
@@ -350,11 +358,14 @@ class Bencode:
             return result
         else:
             raise NotImplementedError(f"Unknown type {type(value)}")
+        
 def read_file(file_name):
     with open(file_name, "rb") as f:
         return f.read()
+    
 def get_piece_hashes(self, pieces):
     return [pieces[i : i + 20].hex() for i in range(0, len(pieces), 20)]
+
 def handle_decode(bencoded_value):
     def bytes_to_str(data):
         if isinstance(data, bytes):
@@ -362,11 +373,12 @@ def handle_decode(bencoded_value):
         raise TypeError(f"Type not serializable: {type(data)}")
     decoded_value = Bencode.decode(bencoded_value)
     print(json.dumps(decoded_value, default=bytes_to_str))
+
 def handle_info(torrent_file_name):
-    file_data = read_file(torrent_file_name)
+    file_data = read_file(torrent_file_name)    #read bytes
     decoded_data = Bencode.decode(file_data)
     meta_info = MetaInfo(decoded_data)
-    print(f"Tracker URL: {meta_info.announce.decode()}")
+    print(f"Tracker URL: {meta_info.announce.decode()}")    #string built in function
     print(f"Length: {meta_info.length}")
     print(f"Info Hash: {meta_info.info_hash_hex}")
     print(f"Piece Length: {meta_info.piece_length}")
@@ -374,6 +386,7 @@ def handle_info(torrent_file_name):
     piece_hashes = meta_info.get_piece_hashes()
     for piece_hash in piece_hashes:
         print(piece_hash)
+
 def handle_download_piece(download_directory, torrent_file_name, piece):
     # extract the meta info from the torrent file
     file_data = read_file(torrent_file_name)
@@ -400,24 +413,30 @@ def handle_download_piece(download_directory, torrent_file_name, piece):
     peer.connect(peer_ip, peer_port)
     peer.handshake(meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
+    #print all the pieces using while loop
+
     if piece not in indexes_of_pieces:
         raise ValueError(f"Peer does not have piece {piece}")
     # peer.interested_send()
     # peer.unchock_listen()
     piece_length = meta_info.piece_length
-    if piece == (len(meta_info.pieces) // 20) - 1:
-        piece_length = meta_info.length % meta_info.piece_length
-    block = peer.request_send(piece, piece_length)
-    print(len(block))
-    try:
-        with open(f"{download_directory}", "wb") as f:
-            f.write(block)
-            print(f"Piece {piece} downloaded to {download_directory}")
-    except Exception as e:
-        print(e)
-        
+
+    for piece in indexes_of_pieces:
+        if piece == (len(meta_info.pieces) // 20) - 1:
+            piece_length = meta_info.length % meta_info.piece_length
+        block = peer.request_send(piece, piece_length)
+        return
+        try:
+            #append
+            with open(f"{download_directory}", "ab") as f:
+                f.write(block)
+                print(f"Piece {piece} downloaded to {download_directory}")
+        except Exception as e:
+            print(e)
+
 def get_peer_ip(peer):
     return f"{peer[0]}.{peer[1]}.{peer[2]}.{peer[3]}:{peer[4]*256 + peer[5]}"
+
 def handle_peers(torrent_file_name):
     file_data = read_file(torrent_file_name)
     decoded_data = Bencode.decode(file_data)
@@ -427,32 +446,63 @@ def handle_peers(torrent_file_name):
         meta_info.info_hash, MY_PEER_ID.decode(), 55555, 0, 0, meta_info.length, 1
     )
     if response.status_code != 200:
+                raise ConnectionError(
+            f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
+        )
+    # print(response)
+    response_data = response.content
+    decoded_response = Bencode.decode(response_data)
+    # print(decoded_response)
+    peers = decoded_response["peers"]
+    peers_ip = []
+    for i in range(0, len(peers), 6):
+        peers_ip.append(get_peer_ip(peers[i : i + 6]))  #4bytes ip + 2bytes port
+    for peer in peers_ip:
+        print(peer)
+
+def handle_handshake(torrent_file_name, peer_ip_with_port):
+    file_data = read_file(torrent_file_name)
+    decoded_data = Bencode.decode(file_data)
+    meta_info = MetaInfo(decoded_data)
+
+    peer_ip, peer_port = peer_ip_with_port.split(":")
+    peer_port = int(peer_port)
+
+    peer = Peer()
+    peer.connect(peer_ip, peer_port)
+    connected_peer_id = peer.handshake(meta_info.info_hash, MY_PEER_ID)
+    print(f"Peer ID: {connected_peer_id.hex()}")
+
+def handle_download(output_directory, torrent_file_name):
+    file_data = read_file(torrent_file_name)
+    decoded_data = Bencode.decode(file_data)
+    meta_info = MetaInfo(decoded_data)
+
+    tracker = Tracker(meta_info.announce)
+    response = tracker.get_peers(
+        meta_info.info_hash, MY_PEER_ID.decode(), 55555, 0, 0, meta_info.length, 1
+    )
+    if response.status_code != 200:
         raise ConnectionError(
             f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
         )
     response_data = response.content
+
     decoded_response = Bencode.decode(response_data)
     peers = decoded_response["peers"]
-    peers_ip = []
-    for i in range(0, len(peers), 6):
-        peers_ip.append(get_peer_ip(peers[i : i + 6]))
-    for peer in peers_ip:
-        print(peer)
-        
-def handle_handshake(torrent_file_name, peer_ip_with_port):
-    file_data = read_file(torrent_file_name)
-    decoded_data = Bencode.decode(file_data)
-
-    meta_info = MetaInfo(decoded_data)
-    peer_ip, peer_port = peer_ip_with_port.split(":")
-    peer_port = int(peer_port)
-    
     peer = Peer()
-
+    peer_ip_port = get_peer_ip(peers[0:6])
+    peer_ip = peer_ip_port.split(":")[0]
+    peer_port = int(peer_ip_port.split(":")[1])
     peer.connect(peer_ip, peer_port)
-    connected_peer_id = peer.handshake(meta_info.info_hash, MY_PEER_ID)
-    print(connected_peer_id)
-    print(f"Peer ID: {connected_peer_id.hex()}")
+    peer.handshake(meta_info.info_hash, MY_PEER_ID)
+    indexes_of_pieces = peer.bitfield_listen()
+    peer.interested_send()
+    peer.unchock_listen()
+    for piece in indexes_of_pieces:
+        handle_download_piece(f"{output_directory}", torrent_file_name, piece)
+
+
 def main():
     command = sys.argv[1]
     if command == "decode":
@@ -471,11 +521,15 @@ def main():
     elif command == "download_piece":
         assert sys.argv[2] == "-o", "Expected -o as the second argument"
         output_directory = sys.argv[3]  # /tmp/test-piece-0
-        torrent_file_name = sys.argv[4]  # samble.torrent
+        torrent_file_name = sys.argv[4]  # sample.torrent
         piece = int(sys.argv[5])  # 0
         handle_download_piece(output_directory, torrent_file_name, piece)
+    elif command == "download":
+        assert sys.argv[2] == "-o", "Expected -o as the second argument"
+        output_directory = sys.argv[3]
+        torrent_file_name = sys.argv[4]
+        handle_download(output_directory, torrent_file_name)
     else:
         raise NotImplementedError(f"Unknown command {command}")
-    
 if __name__ == "__main__":
     main()
