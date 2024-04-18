@@ -59,7 +59,7 @@ class Seeder:
     def seeding(self, conn, addr, piece_id, offset, block_length):
         print("Seeding...")
         with open(self.file_path, "rb") as f:
-            f.seek(offset)
+            f.seek(offset * BLOCK_SIZE)
             piece = f.read(block_length)
             conn.sendall(piece)
         conn.close()
