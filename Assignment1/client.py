@@ -8,16 +8,17 @@ class Seeder:
         self.server_host = get_local_ip()
         self.server_port = SERVER_PORT
         self.main_seeder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.main_seeder.bind((get_local_ip(), LOCAL_PORT))     #static one, may change later
+        self.main_seeder.bind((self.server_host, LOCAL_PORT))     #static one, may change later
         
         print(f"Seeder IP: {self.server_host}")
         print(f"Server is listening on port {LOCAL_PORT}...")
         self.main_seeder.settimeout(1)
         self.main_seeder.listen()
+        self.MY_PEER_ID = b'-RN0.0.0-Z\xf5\xc2\xcfH\x88\x15\xc4\xa2\xfa\x7f'
 
         self.file_path = FILE_PATH
 
-        self.pieces = []
+        self.pieces = [0, 1, 3, 6, 7]
     
     def parse_request(self, request):
         protocol_len, = struct.unpack("B", request[:1])
@@ -31,11 +32,19 @@ class Seeder:
         return (protocol_len, protocol, reserved, infohash, peerid)
     
     def handle_handshake(self, conn, addr):
-        request = conn.recv(70)
+        request = conn.recv(68)
         # protocol_len, protocol, reserved, infohash, peerid = self.parse_request(request)
         # message = (protocol_len + protocol + reserved + infohash + peerid)
-        print(request[48:])
         conn.sendall(request)
+        
+        bitfield_send = (len(self.pieces).to_bytes(4, byteorder="big") + b"\x05")
+        conn.sendall(bitfield_send)
+        
+        bitfield = 0
+        for i in self.pieces:
+            bitfield |= 1 << (7-i)
+            
+        conn.send(bitfield.to_bytes(1, byteorder="big"))
         conn.close()
 
     def unchoke_send(self, conn, addr):
@@ -66,8 +75,8 @@ class Seeder:
                 thread = threading.Thread(target=self.handle_handshake, args=(conn, addr))
                 thread.start()
 
-                thread2 = threading.Thread(target=self.seeding, args=(conn, addr))
-                thread2.start()
+                # thread2 = threading.Thread(target=self.seeding, args=(conn, addr))
+                # thread2.start()
             except:
                 pass
     

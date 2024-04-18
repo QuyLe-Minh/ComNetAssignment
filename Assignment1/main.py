@@ -90,13 +90,10 @@ class Peer:
         handshake_msg = (
             self.protocol_length + self.protocol + self.reserved + info_hash + peer_id
         )
-        print(self.protocol_length,self.protocol,self.reserved,info_hash,peer_id)
-        print(handshake_msg)
-
         self.socket.sendall(handshake_msg)  # send the handshake message
         response = self.socket.recv(68)  # receive the handshake response
         connected_peer_id = response[48:]
-        print(connected_peer_id)
+        #ID response will be ID of the seeder
         return connected_peer_id
     """
     The choke message is used to notify the peer that the client is not interested in downloading pieces from the peer.
@@ -175,14 +172,18 @@ class Peer:
     """
     def bitfield_listen(self) -> list[int]:
         response = self.socket.recv(5)
+        print(response)
         length = int.from_bytes(response[0:4], byteorder="big")
+        print(length)
         message_id = response[4]
         if message_id != BITFIELD_ID:
             raise ValueError(f"Invalid message id: {message_id} for bitfield message")
         payload = self.socket.recv(length - 1)
+        print(payload)
         payload_str = "".join(format(x, "08b") for x in payload)
-        # print(payload_str)
+        print(payload_str)
         indexes_of_pieces = [i for i, bit in enumerate(payload_str) if bit == "1"]
+        print(indexes_of_pieces)
         return indexes_of_pieces
     """
     The request message is used to request a piece from the peer.
@@ -386,7 +387,7 @@ def handle_download_piece(download_directory, torrent_file_name, piece):
     # connect to the tracker and get the peers
     tracker = Tracker(meta_info.announce)
     response = tracker.get_peers(
-        meta_info.info_hash, MY_PEER_ID.decode(), 6881, 0, 0, meta_info.length, 1
+        meta_info.info_hash, MY_PEER_ID.decode(), 55555, 0, 0, meta_info.length, 1
     )
     if response.status_code != 200:
         raise ConnectionError(
@@ -404,6 +405,7 @@ def handle_download_piece(download_directory, torrent_file_name, piece):
     peer.connect(peer_ip, peer_port)
     peer.handshake(meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
+    return
     if piece not in indexes_of_pieces:
         raise ValueError(f"Peer does not have piece {piece}")
     peer.interested_send()

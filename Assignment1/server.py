@@ -26,9 +26,8 @@ class Server:
         peer = socket.inet_aton(ip) + struct.pack('!H', port)
         self.peers += peer
         
-    def handle_client_request(self, conn, addr):
+    def handle_get_request(self, conn, addr, request):
         self.add_peer(addr)
-        request = conn.recv(1024).decode()
         GET_request = request.split(" ")[1]
         request_params = urllib.parse.parse_qs(urllib.parse.urlparse(request).query)
         
@@ -38,11 +37,20 @@ class Server:
             "interval": self.interval,
             "min_interval": self.min_interval,
             "peers": self.peers
-        }
+        }        
+        
         param = Bencode.encode(param)   #encode to d type
         header = 'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n'
         response = header.encode("utf-8") + param
         conn.sendall(response)
+        
+    def handle_client_request(self, conn, addr):
+        request = conn.recv(1024).decode()
+        print(request)
+        command = request.split(" ")[0]
+        if command == "GET":
+            self.handle_get_request(conn, addr, request)
+    
         conn.close()
         
     def listening(self):
