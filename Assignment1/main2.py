@@ -395,7 +395,7 @@ def handle_download_piece(download_directory, torrent_file_name, piece):
     # connect to the tracker and get the peers
     tracker = Tracker(meta_info.announce)
     response = tracker.get_peers(
-        meta_info.info_hash, MY_PEER_ID.decode(), 6881, 0, 0, meta_info.length, 1
+        meta_info.info_hash, MY_PEER_ID.decode(), 55555, 0, 0, meta_info.length, 1
     )
     if response.status_code != 200:
         raise ConnectionError(

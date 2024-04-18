@@ -7,7 +7,7 @@ class Tracker:
         self,
         info_hash: bytes,
         peer_id: str,
-        port: int = 6881,
+        port: int = 55555,
         uploaded: int = 0,
         downloaded: int = 0,
         left: int = 0,

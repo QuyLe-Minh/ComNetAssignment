@@ -1,9 +1,6 @@
 import socket
 import re
 
-SERVER_PORT = 55555
-LOCAL_PORT = 20386
-
 CHOKE_ID = 0
 UNCHOKE_ID = 1
 INTERESTED_ID = 2
