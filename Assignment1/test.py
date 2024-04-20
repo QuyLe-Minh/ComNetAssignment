@@ -1,4 +1,5 @@
 from utilities import *
+
 # protocol = b"BitTorrent protocol"
 # reserved = b"\x00"
 # protocol_length = len(protocol).to_bytes(1, byteorder="big")
@@ -7,9 +8,10 @@ from utilities import *
 
 
 if __name__ == "__main__":
+
     ip = get_local_ip()
     print(ip)
-    create_torrent_file("swe.pdf", f"http://{ip}:55555/announce")
+    create_torrent_file("swe.pdf", f"http://{ip}:{SERVER_PORT}/announce")
 
 # peer = socket.inet_aton('192.168.1.1') + struct.pack('!H', 6881) + socket.inet_aton('192.168.1.3') + struct.pack('!H', 55555)
 # print(get_peer_ip(peer[6:]))

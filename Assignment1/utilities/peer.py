@@ -1,7 +1,7 @@
 import socket
 import re
 
-SERVER_PORT = 55555
+SERVER_PORT = 63699
 LOCAL_PORT = 20386
 
 CHOKE_ID = 0
