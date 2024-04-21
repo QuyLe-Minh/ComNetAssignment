@@ -68,13 +68,11 @@ class Seeder:
         self.handle_handshake(conn, addr)
         conn.settimeout(10)
         while True:
-            try:
-                request = conn.recv(17)
-            except:
+            request = conn.recv(17)
+            if request == b"":
                 print("Connection closed")
                 conn.close()
                 break
-            
             message_id, payload = self.parse_request_send(request)
             
             if message_id == REQUEST_ID:
@@ -97,8 +95,5 @@ class Seeder:
 if __name__ == "__main__":
     seeder = Seeder()
     seeder.listening()
-    # handle_download_piece("", "swe.torrent", 0)
-    # client = Client()
-    # client.connect_to_server()
  
                      
