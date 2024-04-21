@@ -3,7 +3,7 @@ from .peer import *
 from .utils import *
 from .tracker import *
 
-FILE_PATH = "swe.pdf"
+FILE_PATH = "test.txt"
 
 SERVER_PORT = 55555
 LOCAL_PORT = 20386

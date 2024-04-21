@@ -421,18 +421,17 @@ def handle_download_piece(download_directory, torrent_file_name, piece):
     # peer.unchock_listen()
     piece_length = meta_info.piece_length
 
-    for piece in indexes_of_pieces:
-        if piece == (len(meta_info.pieces) // 20) - 1:
-            piece_length = meta_info.length % meta_info.piece_length
-        block = peer.request_send(piece, piece_length)
-        return
-        try:
-            #append
-            with open(f"{download_directory}", "ab") as f:
-                f.write(block)
-                print(f"Piece {piece} downloaded to {download_directory}")
-        except Exception as e:
-            print(e)
+    if piece == (len(meta_info.pieces) // 20) - 1:
+        piece_length = meta_info.length % meta_info.piece_length
+    block = peer.request_send(piece, piece_length)
+    
+    try:
+        #append
+        with open(f"{download_directory}", "ab") as f:
+            f.write(block)
+            print(f"Piece {piece} downloaded to {download_directory}")
+    except Exception as e:
+        print(e)
 
 def get_peer_ip(peer):
     return f"{peer[0]}.{peer[1]}.{peer[2]}.{peer[3]}:{peer[4]*256 + peer[5]}"

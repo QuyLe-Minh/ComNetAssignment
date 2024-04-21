@@ -18,7 +18,7 @@ class Seeder:
 
         self.file_path = FILE_PATH
 
-        self.pieces = [0, 1, 3, 6, 7]
+        self.pieces = [0, 1, 2,3,4,5,6]
     
     def parse_request(self, request):
         protocol_len, = struct.unpack("B", request[:1])
@@ -33,10 +33,7 @@ class Seeder:
     
     def handle_handshake(self, conn, addr):
         request = conn.recv(68)
-        # protocol_len, protocol, reserved, infohash, peerid = self.parse_request(request)
-        # message = (protocol_len + protocol + reserved + infohash + peerid)
         conn.sendall(request)
-        
         bitfield_send = (len(self.pieces).to_bytes(4, byteorder="big") + b"\x05")
         conn.sendall(bitfield_send)
         
@@ -46,46 +43,46 @@ class Seeder:
             
         conn.send(bitfield.to_bytes(1, byteorder="big"))
 
-    def unchoke_send(self, conn, addr):
-        pass
-
-    def get_message(self, conn, addr):
-        piece = None
-        if piece in self.pieces:
-            self.unchoke_send(conn, addr)
-            
-        conn.close()
-
     def seeding(self, conn, addr, piece_id, offset, block_length):
         print("Seeding...")
+        message_id = PIECE_ID.to_bytes(1, byteorder="big")
         with open(self.file_path, "rb") as f:
             f.seek(piece_id * BLOCK_SIZE + offset * block_length)
             piece = f.read(block_length)
-            conn.sendall(piece)
-        conn.close()
+            payload = piece_id.to_bytes(4, byteorder="big")
+            payload += offset.to_bytes(4, byteorder="big")
+            payload += piece
+            
+            peer_message = PeerMessage(message_id, payload)
+            conn.sendall(peer_message.get_encoded())
         
     def parse_request_send(self, request):
         message_length_prefix = request[:4]
         message_id = request[4]
         payload = request[5:]
         
-        # piece_id = payload[:4]
-        # offset = payload[4:8]
-        # block_length = payload[8:]
-        
-        piece_id = int.from_bytes(payload[:4], byteorder='big')
-        offset = int.from_bytes(payload[4:8], byteorder='big')
-        block_length = int.from_bytes(payload[8:], byteorder='big')
-        
-        return (piece_id, offset, block_length)
+        return (message_id, payload)
         
         
     def handle_client(self, conn, addr):
         self.handle_handshake(conn, addr)
-        request = conn.recv(17)
-        piece_id, offset, block_length = self.parse_request_send(request)
-        conn.sendall(request[:13])
-        self.seeding(conn, addr, piece_id, offset, block_length)
+        conn.settimeout(10)
+        while True:
+            try:
+                request = conn.recv(17)
+            except:
+                print("Connection closed")
+                conn.close()
+                break
+            
+            message_id, payload = self.parse_request_send(request)
+            
+            if message_id == REQUEST_ID:
+                piece_id = int.from_bytes(payload[:4], byteorder='big')
+                offset = int.from_bytes(payload[4:8], byteorder='big')
+                block_length = int.from_bytes(payload[8:], byteorder='big')
+            
+                self.seeding(conn, addr, piece_id, offset, block_length)
         
     def listening(self):
         while True:
@@ -94,9 +91,6 @@ class Seeder:
                 print("HI PEER")
                 thread = threading.Thread(target=self.handle_client, args=(conn, addr))
                 thread.start()
-
-                # thread2 = threading.Thread(target=self.seeding, args=(conn, addr))
-                # thread2.start()
             except:
                 pass
     

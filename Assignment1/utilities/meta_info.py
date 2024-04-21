@@ -119,7 +119,7 @@ class MetaInfo:
     def get_piece_hashes(self):
         return [self.pieces[i : i + 20].hex() for i in range(0, len(self.pieces), 20)]  #20 bytes/piece
     
-def create_torrent_file(file_path, tracker_url, piece_length=262144):  # Default piece length is 256KB
+def create_torrent_file(file_path, tracker_url, piece_length=32768):  # Default piece length is 32KB
     # Get file info
     file_size = os.path.getsize(file_path)
     file_name = os.path.basename(file_path)
