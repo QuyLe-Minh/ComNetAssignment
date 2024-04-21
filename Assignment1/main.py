@@ -496,9 +496,10 @@ def handle_download(output_directory, torrent_file_name):
     peer.connect(peer_ip, peer_port)
     peer.handshake(meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
-    peer.interested_send()
-    peer.unchock_listen()
+    # peer.interested_send()
+    # peer.unchock_listen()
     for piece in indexes_of_pieces:
+        print(f"Downloading piece {piece}")
         handle_download_piece(f"{output_directory}", torrent_file_name, piece)
 
 

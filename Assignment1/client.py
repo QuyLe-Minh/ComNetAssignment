@@ -18,7 +18,7 @@ class Seeder:
 
         self.file_path = FILE_PATH
 
-        self.pieces = [0, 1, 2,3,4,5,6]
+        self.pieces = [0,1,2,3,4,5,6]
     
     def parse_request(self, request):
         protocol_len, = struct.unpack("B", request[:1])
@@ -66,7 +66,6 @@ class Seeder:
         
     def handle_client(self, conn, addr):
         self.handle_handshake(conn, addr)
-        conn.settimeout(10)
         while True:
             request = conn.recv(17)
             if request == b"":
