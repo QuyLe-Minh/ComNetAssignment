@@ -19,10 +19,10 @@ case "$command" in
     info|peers|handshake)
         python3 "$PYTHON_SCRIPT" "$command" "$torrent_file_name"
         ;;
-    download_piece)
+    download)
         python3 "$PYTHON_SCRIPT" "$command" -o "$output_directory" "$torrent_file_name" "$piece"
         ;;
-    download)
+    download_rarest)
         python3 "$PYTHON_SCRIPT" "$command" -o "$output_directory" "$torrent_file_name"
         ;;
     *)

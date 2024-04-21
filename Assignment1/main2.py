@@ -10,6 +10,7 @@ import sys
 import hashlib
 import requests
 import socket
+import random
 # # from bencode import Bencode
 # from meta_info import MetaInfo
 # from tracker import Tracker
@@ -390,59 +391,87 @@ def handle_info(torrent_file_name):
     for piece_hash in piece_hashes:
         print(piece_hash)
 
-def handle_download_piece(download_directory, torrent_file_name, piece):
+def get_rarest_piece_list(peers_data):
+    piece_counts = {}
+    
+    # Step 1: Populate piece_counts with counts of each piece across all peer IPs
+    for peer_ip, pieces in peers_data.items():
+        for piece in pieces:
+            if piece in piece_counts:
+                piece_counts[piece].append(peer_ip)
+            else:
+                piece_counts[piece] = [peer_ip]
+    
+    # Step 2: Sort piece_counts by the count of each piece in ascending order
+    sorted_pieces = sorted(piece_counts.items(), key=lambda x: len(x[1]))
+    
+    # Step 3-4: Create a new dictionary with pieces sorted by rarity and peer IPs that have that piece
+    rarest_to_most_common = {}
+    for piece, peers in sorted_pieces:
+        rarest_to_most_common[piece] = peers
+    
+    return rarest_to_most_common
+
+def handle_download_rarest(download_directory, torrent_file_name):
     # extract the meta info from the torrent file
     file_data = read_file(torrent_file_name)
     decoded_data = Bencode.decode(file_data)
     meta_info = MetaInfo(decoded_data)
-    # connect to the tracker and get the peers
-    # tracker = Tracker(meta_info.announce)
-    # response = tracker.get_peers(
-    #     meta_info.info_hash, MY_PEER_ID.decode(), 6881, 0, 0, meta_info.length, 1
-    # )
-    # if response.status_code != 200:
-    #     raise ConnectionError(
-    #         f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
-    #     )
-    # get the peers from the response
-    # response_data = response.content
-    # decoded_response = Bencode.decode(response_data)
-    # peers = decoded_response["peers"]
     peers_ip = handle_peers(torrent_file_name)
-    print(peers_ip)
-    # connect to the first peer and send the handshake message
-    for peers in peers_ip:
+    # print(peers_ip)
+    peers_data = {}
+
+    # connect to each peer, send handshake message, and retrieve piece indexes
+    for peer_info in peers_ip:
+        peer_ip, peer_port = peer_info.split(":")
+        peer = Peer()
+        # print(peer_info)
+        peer.connect(peer_ip, int(peer_port))
+        peer.handshake(meta_info.info_hash, MY_PEER_ID)
+        indexes_of_pieces = peer.bitfield_listen()
+        # print(indexes_of_pieces)
+        peers_data[peer_info] = indexes_of_pieces
+        peer.close_connection()
+    # get the rarest piece list
+    # peers_data = {
+    # "165.232.33.77:51467": [0, 1, 2, 3, 4],
+    # "178.62.85.20:51486": [0, 1, 3, 5],
+    # "178.62.85.20:51484": [1, 2, 4, 5]
+    # }
+    print(peers_data)
+    rarest_piece_list = get_rarest_piece_list(peers_data)
+
+    blockList = {}
+
+    for key, value in rarest_piece_list.items():
+        random.shuffle(value)
+        print(f"Piece: {key} - Peers: {value}")
+        peer_ip, peer_port = value[0].split(":")
+        print(peer_ip, peer_port)
+        peer = Peer()
+        peer.connect(peer_ip, int(peer_port))
+        peer.handshake(meta_info.info_hash, MY_PEER_ID)
+        peer.bitfield_listen()
+        peer.interested_send()
+        peer.unchock_listen()
+        piece_length = meta_info.piece_length
+        if key == (len(meta_info.pieces) // 20) - 1:
+            piece_length = meta_info.length % meta_info.piece_length
+        block = peer.request_send(key, piece_length)
+        #append to dict block[]
+        blockList[key] = block
+        peer.close_connection()
+    
+    blockList = {k: blockList[k] for k in sorted(blockList.keys())}
+    for key in blockList:
         try:
-            peer = Peer()
-            print(peers)
-            peer_ip = peers.split(":")[0]
-            peer_port = int(peers.split(":")[1])
-            peer.connect(peer_ip, peer_port)
-            peer.handshake(meta_info.info_hash, MY_PEER_ID)
-            indexes_of_pieces = peer.bitfield_listen()
-            print(indexes_of_pieces)
-            # Perform communication with the peer
-        finally:
-            peer.close_connection()
-        #print all the pieces using while loop
+            #append
+            with open(f"{download_directory}", "ab") as f:
+                f.write(blockList[key])
+                print(f"Piece {key} downloaded to {download_directory}")
+        except Exception as e:
+            print(e)
 
-    # if piece not in indexes_of_pieces:
-    #     raise ValueError(f"Peer does not have piece {piece}")
-    # peer.interested_send()
-    # peer.unchock_listen()
-    # piece_length = meta_info.piece_length
-
-    # for piece in indexes_of_pieces:
-    #     if piece == (len(meta_info.pieces) // 20) - 1:
-    #         piece_length = meta_info.length % meta_info.piece_length
-    #     block = peer.request_send(piece, piece_length)
-    #     try:
-    #         #append
-    #         with open(f"{download_directory}", "ab") as f:
-    #             f.write(block)
-    #             print(f"Piece {piece} downloaded to {download_directory}")
-    #     except Exception as e:
-    #         print(e)
 
 def get_peer_ip(peer):
     return f"{peer[0]}.{peer[1]}.{peer[2]}.{peer[3]}:{peer[4]*256 + peer[5]}"
@@ -484,11 +513,12 @@ def handle_handshake(torrent_file_name, peer_ip_with_port):
     connected_peer_id = peer.handshake(meta_info.info_hash, MY_PEER_ID)
     print(f"Peer ID: {connected_peer_id.hex()}")
 
-def handle_download(output_directory, torrent_file_name):
+def handle_download(download_directory, torrent_file_name, piece):
+    # extract the meta info from the torrent file
     file_data = read_file(torrent_file_name)
     decoded_data = Bencode.decode(file_data)
     meta_info = MetaInfo(decoded_data)
-
+    # connect to the tracker and get the peers
     tracker = Tracker(meta_info.announce)
     response = tracker.get_peers(
         meta_info.info_hash, MY_PEER_ID.decode(), 6881, 0, 0, meta_info.length, 1
@@ -497,22 +527,38 @@ def handle_download(output_directory, torrent_file_name):
         raise ConnectionError(
             f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
         )
+    # get the peers from the response
     response_data = response.content
-
     decoded_response = Bencode.decode(response_data)
     peers = decoded_response["peers"]
+    # connect to the first peer and send the handshake message
     peer = Peer()
     peer_ip_port = get_peer_ip(peers[0:6])
+    print(f"Connecting to peer: {peer_ip_port}")
     peer_ip = peer_ip_port.split(":")[0]
     peer_port = int(peer_ip_port.split(":")[1])
     peer.connect(peer_ip, peer_port)
     peer.handshake(meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
+    #print all the pieces using while loop
+
+    if piece not in indexes_of_pieces:
+        raise ValueError(f"Peer does not have piece {piece}")
     peer.interested_send()
     peer.unchock_listen()
-    for piece in indexes_of_pieces:
-        handle_download_piece(f"{output_directory}", torrent_file_name, piece)
+    piece_length = meta_info.piece_length
 
+    for piece in indexes_of_pieces:
+        if piece == (len(meta_info.pieces) // 20) - 1:
+            piece_length = meta_info.length % meta_info.piece_length
+        block = peer.request_send(piece, piece_length)
+        try:
+            #append
+            with open(f"{download_directory}", "ab") as f:
+                f.write(block)
+                print(f"Piece {piece} downloaded to {download_directory}")
+        except Exception as e:
+            print(e)
 
 def main():
     command = sys.argv[1]
@@ -529,17 +575,17 @@ def main():
         torrent_file_name = sys.argv[2]
         peer_ip_with_port = sys.argv[3]
         handle_handshake(torrent_file_name, peer_ip_with_port)
-    elif command == "download_piece":
+    elif command == "download_rarest":
+        assert sys.argv[2] == "-o", "Expected -o as the second argument"
+        output_directory = sys.argv[3]  # /tmp/test-piece-0
+        torrent_file_name = sys.argv[4]  # sample.torrent
+        handle_download_rarest(output_directory, torrent_file_name)
+    elif command == "download":
         assert sys.argv[2] == "-o", "Expected -o as the second argument"
         output_directory = sys.argv[3]  # /tmp/test-piece-0
         torrent_file_name = sys.argv[4]  # sample.torrent
         piece = int(sys.argv[5])  # 0
-        handle_download_piece(output_directory, torrent_file_name, piece)
-    elif command == "download":
-        assert sys.argv[2] == "-o", "Expected -o as the second argument"
-        output_directory = sys.argv[3]
-        torrent_file_name = sys.argv[4]
-        handle_download(output_directory, torrent_file_name)
+        handle_download(output_directory, torrent_file_name, piece)
     else:
         raise NotImplementedError(f"Unknown command {command}")
 if __name__ == "__main__":
