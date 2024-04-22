@@ -21,22 +21,27 @@ class Server:
         self.min_interval = 60
         self.peers = socket.inet_aton(get_local_ip())+ struct.pack('!H', LOCAL_PORT)
         
-    def add_peer(self, addr):
+        self.file_hash = {"test.txt": self.peers,
+                          "swe.pdf": self.peers}
+        
+    def add_peer(self, addr, file_name):
         ip, port = addr
         peer = socket.inet_aton(ip) + struct.pack('!H', port)
-        self.peers += peer
+        self.file_hash[file_name] += peer
         
     def handle_get_request(self, conn, addr, request):
-        self.add_peer(addr)
         GET_request = request.split(" ")[1]
-        request_params = urllib.parse.parse_qs(urllib.parse.urlparse(request).query)
+        name = GET_request.split('&')[-1]
+        file_name = name.split('=')[-1]
+        files = ""
         
+        peers = [self.file_hash[file] for file in files]
         param = {
             "complete": self.complete,
             "incomplete": self.incomplete,
             "interval": self.interval,
             "min_interval": self.min_interval,
-            "peers": self.peers
+            "peers": peers
         }        
         
         param = Bencode.encode(param)   #encode to d type
@@ -44,8 +49,10 @@ class Server:
         response = header.encode("utf-8") + param
         conn.sendall(response)
         
+        self.add_peer(addr, file_name)
+        
     def handle_client_request(self, conn, addr):
-        request = conn.recv(1024).decode()
+        request = conn.recv(1024).decode("utf-8")
         command = request.split(" ")[0]
         if command == "GET":
             self.handle_get_request(conn, addr, request)

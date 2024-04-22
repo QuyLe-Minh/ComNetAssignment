@@ -48,6 +48,7 @@ class Tracker:
         self,
         info_hash: bytes,
         peer_id: str,
+        name: str, 
         port: int = 55555,
         uploaded: int = 0,
         downloaded: int = 0,
@@ -64,6 +65,7 @@ class Tracker:
                 "downloaded": downloaded,
                 "left": left,
                 "compact": compact,
+                "name": name
             },
         )
         return response #type->bytes
@@ -249,7 +251,8 @@ class MetaInfo:
         self.announce = data["announce"]
         self.info = data["info"]
         self.length = self.info["length"]  # single file case
-        self.files = None  # multi files case
+        self.name = self.info["name"]
+        self.files = self.info["files"]
         self.piece_length = self.info["piece length"]
         self.pieces = self.info["pieces"]
         self.info_hash = hashlib.sha1(Bencode.encode(self.info)).digest()   #the actual hash value of the data and returns it as a bytes object.
@@ -381,6 +384,8 @@ def handle_info(torrent_file_name):
     print(f"Tracker URL: {meta_info.announce.decode()}")    #string built in function
     print(f"Length: {meta_info.length}")
     print(f"Info Hash: {meta_info.info_hash_hex}")
+    print(f"File Name: {meta_info.name}")
+    # print(f"Info Hash: {meta_info.info_hash}")
     print(f"Piece Length: {meta_info.piece_length}")
     print(f"Piece Hashes:")
     piece_hashes = meta_info.get_piece_hashes()
@@ -395,7 +400,7 @@ def handle_download_piece(download_directory, torrent_file_name, piece):
     # connect to the tracker and get the peers
     tracker = Tracker(meta_info.announce)
     response = tracker.get_peers(
-        meta_info.info_hash, MY_PEER_ID.decode(), 55555, 0, 0, meta_info.length, 1
+        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, meta_info.length, 1
     )
     if response.status_code != 200:
         raise ConnectionError(
@@ -442,7 +447,7 @@ def handle_peers(torrent_file_name):
     meta_info = MetaInfo(decoded_data)
     tracker = Tracker(meta_info.announce)
     response = tracker.get_peers(
-        meta_info.info_hash, MY_PEER_ID.decode(), 55555, 0, 0, meta_info.length, 1
+        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, meta_info.length, 1
     )
     if response.status_code != 200:
                 raise ConnectionError(
@@ -477,9 +482,10 @@ def handle_download(output_directory, torrent_file_name):
     decoded_data = Bencode.decode(file_data)
     meta_info = MetaInfo(decoded_data)
 
+    
     tracker = Tracker(meta_info.announce)
     response = tracker.get_peers(
-        meta_info.info_hash, MY_PEER_ID.decode(), 55555, 0, 0, meta_info.length, 1
+        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, meta_info.length, 1
     )
     if response.status_code != 200:
         raise ConnectionError(

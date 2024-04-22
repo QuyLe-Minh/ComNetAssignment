@@ -5,6 +5,21 @@ from utilities import *
 # handshake_msg = (protocol_length +  protocol +  reserved + MY_PEER_ID)
 # print("HANDSHAKE_MSG WITHOUT INFO_HASH:", handshake_msg)
 
+import urllib.parse
+
+# Encoded info_hash
+encoded_info_hash = "%A8%8E%9A%1C%F1%E4ca%5B%27%B8%D4%05%08%B26%12%FB%A1Q"
+
+# Decode URL
+decoded_info_hash = urllib.parse.unquote(encoded_info_hash)
+
+# Print decoded bytes
+decoded_bytes = bytearray(decoded_info_hash, 'latin-1')
+print(decoded_bytes)
+
+
+
+
 
 if __name__ == "__main__":
     # n = 1
