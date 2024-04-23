@@ -142,7 +142,7 @@ def create_torrent_file(directory, tracker):
     for file in files:
         with open(os.path.join(directory, file), 'rb') as f:
             while True:
-                piece = f.read(524288)
+                piece = f.read(32768)
                 if not piece:
                     break
                 pieces += hashlib.sha1(piece).digest()

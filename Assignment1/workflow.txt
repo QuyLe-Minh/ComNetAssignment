@@ -1,0 +1,6 @@
+client --request--> server
+server --{file: peer}--> client
+for each file:
+    client --handshake--> peers
+    peers --bitfield-->client
+    peers --Seeding--> client

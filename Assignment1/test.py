@@ -2,13 +2,13 @@ from utilities import *
 from collections import OrderedDict, defaultdict
 
 if __name__ == "__main__":
-    multi_files_hash = OrderedDict(defaultdict(list))
-    multi_files_hash["data"] = [file for file in os.listdir("data")]
-    print([file for file in os.listdir("data")])
-    print(multi_files_hash["hello"])
-    # ip = get_local_ip()
-    # print(ip)
-    # create_torrent_file("data", f"http://{ip}:{SERVER_PORT}/announce")
+    # multi_files_hash = OrderedDict(defaultdict(list))
+    # multi_files_hash["data"] = [file for file in os.listdir("data")]
+    # print([file for file in os.listdir("data")])
+    # print(multi_files_hash["hello"])
+    ip = get_local_ip()
+    print(ip)
+    create_torrent_file("data", f"http://{ip}:{SERVER_PORT}/announce")
 
 # peer = socket.inet_aton('192.168.1.1') + struct.pack('!H', 6881) + socket.inet_aton('192.168.1.3') + struct.pack('!H', 55555)
 # print(get_peer_ip(peer[6:]))
