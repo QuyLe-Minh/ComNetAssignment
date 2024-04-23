@@ -10,6 +10,7 @@ import sys
 import hashlib
 import requests
 import socket
+import threading
 # # from bencode import Bencode
 # from meta_info import MetaInfo
 # from tracker import Tracker
@@ -461,6 +462,11 @@ def handle_download(output_directory, torrent_file_name):
 
     decoded_response = Bencode.decode(response_data)
     peers = decoded_response["peers"]
+    
+    # for file, peer_addr in peers.items():
+    #     thread = threading.Thread(target=download_file, args=(file, peer_addr, meta_info, output_directory, torrent_file_name))
+    #     thread.start()
+        
     for file, peer_addr in peers.items():
         peer = Peer()
         peer_ip_port = get_peer_ip(peer_addr[0:6])
@@ -470,9 +476,22 @@ def handle_download(output_directory, torrent_file_name):
         peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
         indexes_of_pieces = peer.bitfield_listen()
         print(f"FILE: {file} - PIECES: {indexes_of_pieces}")
-        # for piece in indexes_of_pieces:
-        #     print(f"Downloading piece {piece} of file {file}")
-        #     handle_download_piece(f"{os.path.join(output_directory, file)}", torrent_file_name, file, piece)
+        for piece in indexes_of_pieces:
+            print(f"Downloading piece {piece} of file {file}")
+            handle_download_piece(f"{os.path.join(output_directory, file)}", torrent_file_name, file, piece)
+        
+def download_file(file, peer_addr, meta_info, output_directory, torrent_file_name):
+    peer = Peer()
+    peer_ip_port = get_peer_ip(peer_addr[0:6])
+    peer_ip = peer_ip_port.split(":")[0]
+    peer_port = int(peer_ip_port.split(":")[1])
+    peer.connect(peer_ip, peer_port)
+    peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
+    indexes_of_pieces = peer.bitfield_listen()
+    print(f"FILE: {file} - PIECES: {indexes_of_pieces}")
+    for piece in indexes_of_pieces:
+        print(f"Downloading piece {piece} of file {file}")
+        handle_download_piece(f"{os.path.join(output_directory, file)}", torrent_file_name, file, piece)    
             
 def handle_download_piece(download_directory, torrent_file_name, file, piece):
     # extract the meta info from the torrent file
@@ -498,7 +517,7 @@ def handle_download_piece(download_directory, torrent_file_name, file, piece):
     peer_ip = peer_ip_port.split(":")[0]
     peer_port = int(peer_ip_port.split(":")[1])
     peer.connect(peer_ip, peer_port)
-    peer.handshake(meta_info.info_hash, MY_PEER_ID)
+    peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
     #print all the pieces using while loop
 

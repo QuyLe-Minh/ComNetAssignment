@@ -134,7 +134,7 @@ def create_torrent_file(directory, tracker):
     info = {
         'files': file_dicts,
         'name': directory,
-        'piece length': 32768,  # 32KB
+        'piece length': 131072,  # 128KB
     }
 
     # Generate the pieces
@@ -142,7 +142,7 @@ def create_torrent_file(directory, tracker):
     for file in files:
         with open(os.path.join(directory, file), 'rb') as f:
             while True:
-                piece = f.read(32768)
+                piece = f.read(131072)
                 if not piece:
                     break
                 pieces += hashlib.sha1(piece).digest()

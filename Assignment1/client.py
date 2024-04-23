@@ -15,14 +15,12 @@ class Seeder:
         self.main_seeder.settimeout(1)
         self.main_seeder.listen()
         self.MY_PEER_ID = b'-RN0.0.0-Z\xf5\xc2\xcfH\x88\x15\xc4\xa2\xfa\x7f'
-
-        # self.file_path = os.path.join("data", FILE_PATH)
-
-        self.pieces = {"cs229-linalg.pdf": [0,1,2,3,4],
+        
+        self.pieces = {"cs229-linalg.pdf": [0,1,2],
                        "emnlp2014-depparser.pdf": [0,1,2,3,4],
-                       "test.txt": [0,1,2,3,4]
+                       "test.txt": [0,1]
                        }
-        # self.pieces = [0,1,2,3,4]
+
         self.key = None
     
     def parse_request(self, request):
@@ -50,7 +48,7 @@ class Seeder:
             
         conn.send(bitfield.to_bytes(1, byteorder="big"))
 
-    def seeding(self, conn, addr, piece_id, offset, block_length):
+    def seeding(self, conn, piece_id, offset, block_length):
         print("Seeding...")
         message_id = PIECE_ID.to_bytes(1, byteorder="big")
         with open(os.path.join("data", self.key), "rb") as f:
@@ -86,10 +84,7 @@ class Seeder:
                 offset = int.from_bytes(payload[4:8], byteorder='big')
                 block_length = int.from_bytes(payload[8:], byteorder='big')
             
-                self.seeding(conn, addr, piece_id, offset, block_length)
-            
-            elif message_id == HAVE_ID:
-                self.key = payload.decode() #fix later, payload must contain name of the file requested
+                self.seeding(conn, piece_id, offset, block_length)
         
     def listening(self):
         while True:
