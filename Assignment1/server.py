@@ -1,6 +1,5 @@
 from utilities import *
 import threading
-import urllib
 import struct
 
 class Server:
@@ -22,7 +21,12 @@ class Server:
         self.peers = socket.inet_aton(get_local_ip())+ struct.pack('!H', LOCAL_PORT)
         
         self.file_hash = {"test.txt": self.peers,
-                          "swe.pdf": self.peers}
+                          "swe.pdf": self.peers,
+                          "cs229-linalg.pdf": self.peers,
+                          "emnlp2014-depparser.pdf": self.peers,
+                          }
+        
+        self.multi_files_hash = {"data": [file for file in os.listdir("data")]}
         
     def add_peer(self, addr, file_name):
         ip, port = addr
@@ -33,23 +37,29 @@ class Server:
         GET_request = request.split(" ")[1]
         name = GET_request.split('&')[-1]
         file_name = name.split('=')[-1]
-        files = ""
-        
-        peers = [self.file_hash[file] for file in files]
+        peers = {}
+        try:
+            files = self.multi_files_hash[file_name]
+            for file in files:
+                peers[file] = self.file_hash[file]
+                self.add_peer(addr, file)
+        except:
+            peers[file_name] = self.file_hash[file_name]
+            self.add_peer(addr, file_name)
+
+
         param = {
             "complete": self.complete,
             "incomplete": self.incomplete,
             "interval": self.interval,
             "min_interval": self.min_interval,
-            "peers": peers
+            "peers": peers  # peers is dictionary no matter how many files
         }        
         
         param = Bencode.encode(param)   #encode to d type
         header = 'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n'
         response = header.encode("utf-8") + param
         conn.sendall(response)
-        
-        self.add_peer(addr, file_name)
         
     def handle_client_request(self, conn, addr):
         request = conn.recv(1024).decode("utf-8")

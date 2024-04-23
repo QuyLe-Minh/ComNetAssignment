@@ -84,20 +84,22 @@ class Peer:
     The handshake message is the first message sent by the client to the server.
     It is used to establish a connection between the client and the server.
     The handshake message has the following format:
-    <protocol_len><protocol><reserved><info_hash><peer_id>
+    <protocol_len><protocol><reserved><info_hash><peer_id><file_key>
     protocol_len: 1 byte for length of the protocol identifier
     protocol: 19 bytes of protocol identifier
     reserved: 8 bytes reserved for future use
     info_hash: 20 bytes hash of the info key in the torrent file
     peer_id: 20 bytes unique identifier of the client
+    file_key: variable length key for the file requested
     """
-    def handshake(self, info_hash: bytes, peer_id: bytes) -> bytes:
+    def handshake(self, file: str, info_hash: bytes, peer_id: bytes) -> bytes:
         if len(info_hash) != 20:
             raise ValueError("info_hash must be 20 bytes long")
         if len(peer_id) != 20:
             raise ValueError("peer_id must be 20 bytes long")
+        key = file.encode()
         handshake_msg = (
-            self.protocol_length + self.protocol + self.reserved + info_hash + peer_id
+            self.protocol_length + self.protocol + self.reserved + info_hash + peer_id + key
         )
         self.socket.sendall(handshake_msg)  # send the handshake message
         response = self.socket.recv(68)  # receive the handshake response
@@ -250,9 +252,13 @@ class MetaInfo:
     def __init__(self, data):
         self.announce = data["announce"]
         self.info = data["info"]
-        self.length = self.info["length"]  # single file case
         self.name = self.info["name"]
-        self.files = self.info["files"]
+        self.files_info = None
+        self.length = None
+        try:
+            self.files_info = self.info["files"]    #length, path
+        except:
+            self.length = self.info["length"]
         self.piece_length = self.info["piece length"]
         self.pieces = self.info["pieces"]
         self.info_hash = hashlib.sha1(Bencode.encode(self.info)).digest()   #the actual hash value of the data and returns it as a bytes object.
@@ -382,9 +388,12 @@ def handle_info(torrent_file_name):
     decoded_data = Bencode.decode(file_data)
     meta_info = MetaInfo(decoded_data)
     print(f"Tracker URL: {meta_info.announce.decode()}")    #string built in function
-    print(f"Length: {meta_info.length}")
+    if meta_info.files_info:
+        for file in meta_info.files_info:
+            print(f"File Name: {file['path'][0].decode()}")
+            print(f"File Length: {file['length']}")
     print(f"Info Hash: {meta_info.info_hash_hex}")
-    print(f"File Name: {meta_info.name}")
+    print(f"File Name: {meta_info.name.decode()}")
     # print(f"Info Hash: {meta_info.info_hash}")
     print(f"Piece Length: {meta_info.piece_length}")
     print(f"Piece Hashes:")
@@ -392,7 +401,80 @@ def handle_info(torrent_file_name):
     for piece_hash in piece_hashes:
         print(piece_hash)
 
-def handle_download_piece(download_directory, torrent_file_name, piece):
+
+def get_peer_ip(peer):
+    return f"{peer[0]}.{peer[1]}.{peer[2]}.{peer[3]}:{peer[4]*256 + peer[5]}"
+
+def handle_peers(torrent_file_name):
+    file_data = read_file(torrent_file_name)
+    decoded_data = Bencode.decode(file_data)
+    meta_info = MetaInfo(decoded_data)
+    tracker = Tracker(meta_info.announce)
+    
+    if meta_info.files_info is not None:
+        length = 0
+        for file in meta_info.files_info:
+            length += file["length"]
+    else: 
+        length = meta_info.length
+    
+    response = tracker.get_peers(
+        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, length, 1
+    )
+    if response.status_code != 200:
+                raise ConnectionError(
+            f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
+        )
+    # print(response)
+    response_data = response.content
+    decoded_response = Bencode.decode(response_data)
+    peers = decoded_response["peers"]
+    for file, peer_addr in peers.items():
+        peers_ip = []
+        for i in range(0, len(peer_addr), 6):
+            peers_ip.append(get_peer_ip(peer_addr[i : i + 6]))  #4bytes ip + 2bytes port
+        for peer in peers_ip:
+            print(f"File {file}: {peer}")
+
+
+def handle_download(output_directory, torrent_file_name):
+    """Download file(s)
+
+    Args:
+        output_directory (str): folder to save the downloaded file(s)
+        torrent_file_name
+    """
+    file_data = read_file(torrent_file_name)
+    decoded_data = Bencode.decode(file_data)
+    meta_info = MetaInfo(decoded_data)
+
+    
+    tracker = Tracker(meta_info.announce)
+    response = tracker.get_peers(
+        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, meta_info.length, 1
+    )
+    if response.status_code != 200:
+        raise ConnectionError(
+            f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
+        )
+    response_data = response.content
+
+    decoded_response = Bencode.decode(response_data)
+    peers = decoded_response["peers"]
+    for file, peer_addr in peers.items():
+        peer = Peer()
+        peer_ip_port = get_peer_ip(peer_addr[0:6])
+        peer_ip = peer_ip_port.split(":")[0]
+        peer_port = int(peer_ip_port.split(":")[1])
+        peer.connect(peer_ip, peer_port)
+        peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
+        indexes_of_pieces = peer.bitfield_listen()
+        print(f"FILE: {file} - PIECES: {indexes_of_pieces}")
+        # for piece in indexes_of_pieces:
+        #     print(f"Downloading piece {piece} of file {file}")
+        #     handle_download_piece(f"{os.path.join(output_directory, file)}", torrent_file_name, file, piece)
+            
+def handle_download_piece(download_directory, torrent_file_name, file, piece):
     # extract the meta info from the torrent file
     file_data = read_file(torrent_file_name)
     decoded_data = Bencode.decode(file_data)
@@ -412,7 +494,7 @@ def handle_download_piece(download_directory, torrent_file_name, piece):
     peers = decoded_response["peers"]
     # connect to the first peer and send the handshake message
     peer = Peer()
-    peer_ip_port = get_peer_ip(peers[0:6])
+    peer_ip_port = get_peer_ip(peers[file][0:6])
     peer_ip = peer_ip_port.split(":")[0]
     peer_port = int(peer_ip_port.split(":")[1])
     peer.connect(peer_ip, peer_port)
@@ -436,77 +518,7 @@ def handle_download_piece(download_directory, torrent_file_name, piece):
             f.write(block)
             print(f"Piece {piece} downloaded to {download_directory}")
     except Exception as e:
-        print(e)
-
-def get_peer_ip(peer):
-    return f"{peer[0]}.{peer[1]}.{peer[2]}.{peer[3]}:{peer[4]*256 + peer[5]}"
-
-def handle_peers(torrent_file_name):
-    file_data = read_file(torrent_file_name)
-    decoded_data = Bencode.decode(file_data)
-    meta_info = MetaInfo(decoded_data)
-    tracker = Tracker(meta_info.announce)
-    response = tracker.get_peers(
-        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, meta_info.length, 1
-    )
-    if response.status_code != 200:
-                raise ConnectionError(
-            f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
-        )
-    # print(response)
-    response_data = response.content
-    decoded_response = Bencode.decode(response_data)
-    # print(decoded_response)
-    peers = decoded_response["peers"]
-    peers_ip = []
-    for i in range(0, len(peers), 6):
-        peers_ip.append(get_peer_ip(peers[i : i + 6]))  #4bytes ip + 2bytes port
-    for peer in peers_ip:
-        print(peer)
-
-def handle_handshake(torrent_file_name, peer_ip_with_port):
-    file_data = read_file(torrent_file_name)
-    decoded_data = Bencode.decode(file_data)
-    meta_info = MetaInfo(decoded_data)
-
-    peer_ip, peer_port = peer_ip_with_port.split(":")
-    peer_port = int(peer_port)
-
-    peer = Peer()
-    peer.connect(peer_ip, peer_port)
-    connected_peer_id = peer.handshake(meta_info.info_hash, MY_PEER_ID)
-    print(f"Peer ID: {connected_peer_id.hex()}")
-
-def handle_download(output_directory, torrent_file_name):
-    file_data = read_file(torrent_file_name)
-    decoded_data = Bencode.decode(file_data)
-    meta_info = MetaInfo(decoded_data)
-
-    
-    tracker = Tracker(meta_info.announce)
-    response = tracker.get_peers(
-        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, meta_info.length, 1
-    )
-    if response.status_code != 200:
-        raise ConnectionError(
-            f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
-        )
-    response_data = response.content
-
-    decoded_response = Bencode.decode(response_data)
-    peers = decoded_response["peers"]
-    peer = Peer()
-    peer_ip_port = get_peer_ip(peers[0:6])
-    peer_ip = peer_ip_port.split(":")[0]
-    peer_port = int(peer_ip_port.split(":")[1])
-    peer.connect(peer_ip, peer_port)
-    peer.handshake(meta_info.info_hash, MY_PEER_ID)
-    indexes_of_pieces = peer.bitfield_listen()
-    # peer.interested_send()
-    # peer.unchock_listen()
-    for piece in indexes_of_pieces:
-        print(f"Downloading piece {piece}")
-        handle_download_piece(f"{output_directory}", torrent_file_name, piece)
+        print(e)            
 
 
 def main():
@@ -520,10 +532,6 @@ def main():
     elif command == "peers":
         torrent_file_name = sys.argv[2]
         handle_peers(torrent_file_name)
-    elif command == "handshake":
-        torrent_file_name = sys.argv[2]
-        peer_ip_with_port = sys.argv[3]
-        handle_handshake(torrent_file_name, peer_ip_with_port)
     elif command == "download_piece":
         assert sys.argv[2] == "-o", "Expected -o as the second argument"
         output_directory = sys.argv[3]  # /tmp/test-piece-0

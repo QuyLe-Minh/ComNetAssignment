@@ -119,39 +119,46 @@ class MetaInfo:
     def get_piece_hashes(self):
         return [self.pieces[i : i + 20].hex() for i in range(0, len(self.pieces), 20)]  #20 bytes/piece
     
-def create_torrent_file(file_path, tracker_url, piece_length=32768):  # Default piece length is 32KB
-    # Get file info
-    file_size = os.path.getsize(file_path)
-    file_name = os.path.basename(file_path)
+def create_torrent_file(directory, tracker):
+    # Get all files in directory
+    files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
 
-    # Read the file in pieces and calculate the hash for each piece
+    # Create the file dictionary for each file
+    file_dicts = []
+    for file in files:
+        print(file)
+        file_size = os.path.getsize(os.path.join(directory, file))
+        file_dicts.append({'length': file_size, 'path': [file]})
+
+    # Create the info dictionary
+    info = {
+        'files': file_dicts,
+        'name': directory,
+        'piece length': 32768,  # 32KB
+    }
+
+    # Generate the pieces
     pieces = b''
-    with open(file_path, 'rb') as f:
-        while True:
-            piece = f.read(piece_length)
-            if not piece:
-                break
-            pieces += hashlib.sha1(piece).digest()
+    for file in files:
+        with open(os.path.join(directory, file), 'rb') as f:
+            while True:
+                piece = f.read(524288)
+                if not piece:
+                    break
+                pieces += hashlib.sha1(piece).digest()
+    info['pieces'] = pieces
 
     # Create the torrent file content
     torrent = {
-        'announce': tracker_url,
+        'announce': tracker,
         'creation date': int(time.time()),
-        'info': {
-            'name': file_name,
-            'piece length': piece_length,
-            'length': file_size,
-            'pieces': pieces
-        }
+        'info': info
     }
 
     # Bencode the torrent file content
     torrent_bencoded = Bencode.encode(torrent)
 
     # Write the torrent file
-    torrent_file_name = file_name.split('.')[0] + '.torrent'
-    with open(torrent_file_name, 'wb') as f:
+    with open(directory + '.torrent', 'wb') as f:
         f.write(torrent_bencoded)
-
-    print(f'Torrent file created: {torrent_file_name}')
     

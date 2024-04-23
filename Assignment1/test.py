@@ -1,32 +1,14 @@
 from utilities import *
-# protocol = b"BitTorrent protocol"
-# reserved = b"\x00"
-# protocol_length = len(protocol).to_bytes(1, byteorder="big")
-# handshake_msg = (protocol_length +  protocol +  reserved + MY_PEER_ID)
-# print("HANDSHAKE_MSG WITHOUT INFO_HASH:", handshake_msg)
-
-import urllib.parse
-
-# Encoded info_hash
-encoded_info_hash = "%A8%8E%9A%1C%F1%E4ca%5B%27%B8%D4%05%08%B26%12%FB%A1Q"
-
-# Decode URL
-decoded_info_hash = urllib.parse.unquote(encoded_info_hash)
-
-# Print decoded bytes
-decoded_bytes = bytearray(decoded_info_hash, 'latin-1')
-print(decoded_bytes)
-
-
-
-
+from collections import OrderedDict, defaultdict
 
 if __name__ == "__main__":
-    # n = 1
-    # print(n.to_bytes(4, byteorder="big"))
-    ip = get_local_ip()
-    print(ip)
-    create_torrent_file("test.txt", f"http://{ip}:{SERVER_PORT}/announce")
+    multi_files_hash = OrderedDict(defaultdict(list))
+    multi_files_hash["data"] = [file for file in os.listdir("data")]
+    print([file for file in os.listdir("data")])
+    print(multi_files_hash["hello"])
+    # ip = get_local_ip()
+    # print(ip)
+    # create_torrent_file("data", f"http://{ip}:{SERVER_PORT}/announce")
 
 # peer = socket.inet_aton('192.168.1.1') + struct.pack('!H', 6881) + socket.inet_aton('192.168.1.3') + struct.pack('!H', 55555)
 # print(get_peer_ip(peer[6:]))

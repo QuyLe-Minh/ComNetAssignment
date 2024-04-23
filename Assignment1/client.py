@@ -16,9 +16,14 @@ class Seeder:
         self.main_seeder.listen()
         self.MY_PEER_ID = b'-RN0.0.0-Z\xf5\xc2\xcfH\x88\x15\xc4\xa2\xfa\x7f'
 
-        self.file_path = FILE_PATH
+        # self.file_path = os.path.join("data", FILE_PATH)
 
-        self.pieces = [0,1,2,3,4,5,6]
+        self.pieces = {"cs229-linalg.pdf": [0,1,2,3,4],
+                       "emnlp2014-depparser.pdf": [0,1,2,3,4],
+                       "test.txt": [0,1,2,3,4]
+                       }
+        # self.pieces = [0,1,2,3,4]
+        self.key = None
     
     def parse_request(self, request):
         protocol_len, = struct.unpack("B", request[:1])
@@ -34,11 +39,13 @@ class Seeder:
     def handle_handshake(self, conn, addr):
         request = conn.recv(68)
         conn.sendall(request)
-        bitfield_send = (len(self.pieces).to_bytes(4, byteorder="big") + b"\x05")
+        self.key = conn.recv(32).decode()
+        pieces = self.pieces[self.key]
+        bitfield_send = (len(pieces).to_bytes(4, byteorder="big") + b"\x05")
         conn.sendall(bitfield_send)
         
         bitfield = 0
-        for i in self.pieces:
+        for i in pieces:
             bitfield |= 1 << (7-i)
             
         conn.send(bitfield.to_bytes(1, byteorder="big"))
@@ -46,8 +53,8 @@ class Seeder:
     def seeding(self, conn, addr, piece_id, offset, block_length):
         print("Seeding...")
         message_id = PIECE_ID.to_bytes(1, byteorder="big")
-        with open(self.file_path, "rb") as f:
-            f.seek(piece_id * BLOCK_SIZE + offset * block_length)
+        with open(os.path.join("data", self.key), "rb") as f:
+            f.seek(piece_id * PIECE_LENGTH + offset)
             piece = f.read(block_length)
             payload = piece_id.to_bytes(4, byteorder="big")
             payload += offset.to_bytes(4, byteorder="big")
@@ -80,6 +87,9 @@ class Seeder:
                 block_length = int.from_bytes(payload[8:], byteorder='big')
             
                 self.seeding(conn, addr, piece_id, offset, block_length)
+            
+            elif message_id == HAVE_ID:
+                self.key = payload.decode() #fix later, payload must contain name of the file requested
         
     def listening(self):
         while True:
