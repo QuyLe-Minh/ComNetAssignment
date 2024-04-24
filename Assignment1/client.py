@@ -1,17 +1,20 @@
 from utilities import *
 import threading
 import struct
+
+lock = threading.Lock()
     
 
 class Seeder:
-    def __init__(self):
-        self.server_host = get_local_ip()
-        self.server_port = SERVER_PORT
+    def __init__(self, port):
+        my_ip = get_local_ip()
         self.main_seeder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.main_seeder.bind((self.server_host, LOCAL_PORT)) 
+        self.main_seeder.bind((my_ip, port)) 
         
-        print(f"Seeder IP: {self.server_host}")
-        print(f"Server is listening on port {LOCAL_PORT}...")
+        lock.acquire()
+        print(f"Seeder IP: {my_ip}")
+        print(f"Server is listening on port {port}...")
+        lock.release()
         self.main_seeder.settimeout(1)
         self.main_seeder.listen()
         self.MY_PEER_ID = b'-RN0.0.0-Z\xf5\xc2\xcfH\x88\x15\xc4\xa2\xfa\x7f'
@@ -95,13 +98,18 @@ class Seeder:
         while True:
             try:
                 conn, _ = self.main_seeder.accept()
-                thread = threading.Thread(target=self.handle_client, args=(conn))
+                thread = threading.Thread(target=self.handle_client, args=(conn,))
                 thread.start()
             except:
                 pass
     
-if __name__ == "__main__":
-    seeder = Seeder()
+def start_seeder(port):
+    seeder = Seeder(port)
     seeder.listening()
+
+if __name__ == "__main__":
+    for port in LOCAL_PORT:
+        thread = threading.Thread(target=start_seeder, args=(port,))
+        thread.start()
  
                      

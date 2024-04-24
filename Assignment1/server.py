@@ -18,12 +18,15 @@ class Server:
         self.incomplete = 0
         self.interval = 60
         self.min_interval = 60
-        self.peers = socket.inet_aton(get_local_ip())+ struct.pack('!H', LOCAL_PORT)
-        
-        self.file_hash = {"test.txt": self.peers,
-                          "swe.pdf": self.peers,
-                          "cs229-linalg.pdf": self.peers,
-                          "emnlp2014-depparser.pdf": self.peers,
+        self.peers = []
+
+        for port in LOCAL_PORT:
+            self.peers.append(socket.inet_aton(get_local_ip()) + struct.pack('!H', port))
+
+        self.file_hash = {"test.txt": self.peers[0],
+                          "swe.pdf": self.peers[1] + self.peers[4],
+                          "cs229-linalg.pdf": self.peers[2],
+                          "emnlp2014-depparser.pdf": self.peers[3] + self.peers[0],
                           }
         
         self.multi_files_hash = {"data": [file for file in os.listdir("data")]}
