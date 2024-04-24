@@ -26,6 +26,9 @@ PIECE_ID = 7
 CANCEL_ID = 8
 MY_PEER_ID = b"00112233445566778899"    #string of length 20, identifier for client
 BLOCK_SIZE = 2**14  # 16KB
+
+lock = threading.Lock()
+
 class PeerMessage:
     def __init__(self, message_id: bytes, payload: bytes):
         self.message_id = message_id
@@ -81,6 +84,9 @@ class Peer:
     def connect(self, peer_ip, peer_port) -> socket.socket:
         self.socket.connect((peer_ip, peer_port))
         return self.socket
+    
+    def disconnect(self, peer_ip, peer_port):
+        self.socket.close()
     """"
     The handshake message is the first message sent by the client to the server.
     It is used to establish a connection between the client and the server.
@@ -93,14 +99,13 @@ class Peer:
     peer_id: 20 bytes unique identifier of the client
     file_key: variable length key for the file requested
     """
-    def handshake(self, file: str, info_hash: bytes, peer_id: bytes) -> bytes:
+    def handshake(self, info_hash: bytes, peer_id: bytes) -> bytes:
         if len(info_hash) != 20:
             raise ValueError("info_hash must be 20 bytes long")
         if len(peer_id) != 20:
             raise ValueError("peer_id must be 20 bytes long")
-        key = file.encode()
         handshake_msg = (
-            self.protocol_length + self.protocol + self.reserved + info_hash + peer_id + key
+            self.protocol_length + self.protocol + self.reserved + info_hash + peer_id
         )
         self.socket.sendall(handshake_msg)  # send the handshake message
         response = self.socket.recv(68)  # receive the handshake response
@@ -199,8 +204,9 @@ class Peer:
     length: 4 bytes for length of the message
     message_id: 1 byte for message identifier
     payload: 12 bytes payload representing the index, begin, and length
+    payload: ~30 bytes more for the file requested?
     """
-    def request_send(self, piece_index: int, piece_length: int) -> bytes:
+    def request_send(self, file: str, piece_index: int, piece_length: int) -> bytes:
         message_id = REQUEST_ID.to_bytes(1, byteorder="big")
         full_block = b""
         for offset in range(0, piece_length, BLOCK_SIZE):
@@ -210,6 +216,7 @@ class Peer:
             payload = piece_index.to_bytes(4, byteorder="big")
             payload += offset.to_bytes(4, byteorder="big")
             payload += block_length.to_bytes(4, byteorder="big")
+            payload += file.encode()
             peer_message = PeerMessage(message_id, payload)
             # send the request message
             self.socket.sendall(peer_message.get_encoded())
@@ -463,22 +470,14 @@ def handle_download(output_directory, torrent_file_name):
     decoded_response = Bencode.decode(response_data)
     peers = decoded_response["peers"]
     
-    # for file, peer_addr in peers.items():
-    #     thread = threading.Thread(target=download_file, args=(file, peer_addr, meta_info, output_directory, torrent_file_name))
-    #     thread.start()
-        
+    from concurrent.futures import ThreadPoolExecutor
+    executors = ThreadPoolExecutor(max_workers=3)
+    
     for file, peer_addr in peers.items():
-        peer = Peer()
-        peer_ip_port = get_peer_ip(peer_addr[0:6])
-        peer_ip = peer_ip_port.split(":")[0]
-        peer_port = int(peer_ip_port.split(":")[1])
-        peer.connect(peer_ip, peer_port)
-        peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
-        indexes_of_pieces = peer.bitfield_listen()
-        print(f"FILE: {file} - PIECES: {indexes_of_pieces}")
-        for piece in indexes_of_pieces:
-            print(f"Downloading piece {piece} of file {file}")
-            handle_download_piece(f"{os.path.join(output_directory, file)}", torrent_file_name, file, piece)
+        executors.submit(download_file, file, peer_addr, meta_info, output_directory, torrent_file_name)
+        
+    executors.shutdown(wait=True)
+        
         
 def download_file(file, peer_addr, meta_info, output_directory, torrent_file_name):
     peer = Peer()
@@ -486,12 +485,15 @@ def download_file(file, peer_addr, meta_info, output_directory, torrent_file_nam
     peer_ip = peer_ip_port.split(":")[0]
     peer_port = int(peer_ip_port.split(":")[1])
     peer.connect(peer_ip, peer_port)
-    peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
+    peer.handshake(meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
     print(f"FILE: {file} - PIECES: {indexes_of_pieces}")
-    for piece in indexes_of_pieces:
+    for piece in indexes_of_pieces: 
+        lock.acquire()
         print(f"Downloading piece {piece} of file {file}")
-        handle_download_piece(f"{os.path.join(output_directory, file)}", torrent_file_name, file, piece)    
+        handle_download_piece(f"{output_directory}/{file}", torrent_file_name, file, piece)
+        lock.release()
+    
             
 def handle_download_piece(download_directory, torrent_file_name, file, piece):
     # extract the meta info from the torrent file
@@ -517,19 +519,17 @@ def handle_download_piece(download_directory, torrent_file_name, file, piece):
     peer_ip = peer_ip_port.split(":")[0]
     peer_port = int(peer_ip_port.split(":")[1])
     peer.connect(peer_ip, peer_port)
-    peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
+    peer.handshake(meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
-    #print all the pieces using while loop
 
     if piece not in indexes_of_pieces:
         raise ValueError(f"Peer does not have piece {piece}")
-    # peer.interested_send()
-    # peer.unchock_listen()
+
     piece_length = meta_info.piece_length
 
     if piece == (len(meta_info.pieces) // 20) - 1:
         piece_length = meta_info.length % meta_info.piece_length
-    block = peer.request_send(piece, piece_length)
+    block = peer.request_send(file, piece, piece_length)
     
     try:
         #append

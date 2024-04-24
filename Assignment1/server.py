@@ -42,10 +42,8 @@ class Server:
             files = self.multi_files_hash[file_name]
             for file in files:
                 peers[file] = self.file_hash[file]
-                self.add_peer(addr, file)
         except:
             peers[file_name] = self.file_hash[file_name]
-            self.add_peer(addr, file_name)
 
 
         param = {
