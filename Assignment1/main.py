@@ -1,9 +1,3 @@
-#
-#
-# THIS FILE IS NO RELEVANT TO THIS REPO
-#
-#
-
 import json
 import os
 import sys
@@ -11,10 +5,8 @@ import hashlib
 import requests
 import socket
 import threading
-# # from bencode import Bencode
-# from meta_info import MetaInfo
-# from tracker import Tracker
-# from peer import Peer
+import random
+
 CHOKE_ID = 0
 UNCHOKE_ID = 1
 INTERESTED_ID = 2
@@ -85,8 +77,10 @@ class Peer:
         self.socket.connect((peer_ip, peer_port))
         return self.socket
     
-    def disconnect(self, peer_ip, peer_port):
-        self.socket.close()
+    def disconnect(self):
+        if self.socket:
+            self.socket.close()
+            self.socket = None
     """"
     The handshake message is the first message sent by the client to the server.
     It is used to establish a connection between the client and the server.
@@ -99,17 +93,17 @@ class Peer:
     peer_id: 20 bytes unique identifier of the client
     file_key: variable length key for the file requested
     """
-    def handshake(self, info_hash: bytes, peer_id: bytes) -> bytes:
+    def handshake(self, file:str, info_hash: bytes, peer_id: bytes) -> bytes:
         if len(info_hash) != 20:
             raise ValueError("info_hash must be 20 bytes long")
         if len(peer_id) != 20:
             raise ValueError("peer_id must be 20 bytes long")
         handshake_msg = (
-            self.protocol_length + self.protocol + self.reserved + info_hash + peer_id
+            self.protocol_length + self.protocol + self.reserved + info_hash + peer_id + file.encode()
         )
         self.socket.sendall(handshake_msg)  # send the handshake message
         response = self.socket.recv(68)  # receive the handshake response
-        connected_peer_id = response[48:]
+        connected_peer_id = response[48:68]
         return connected_peer_id
     """
     The choke message is used to notify the peer that the client is not interested in downloading pieces from the peer.
@@ -444,6 +438,66 @@ def handle_peers(torrent_file_name):
         for peer in peers_ip:
             print(f"File {file}: {peer}")
 
+def get_rarest_piece_list(peers_data):
+    piece_counts = {}
+
+    for ip, pieces in peers_data.items():
+        for piece in pieces:
+            if piece in piece_counts:
+                piece_counts[piece] = []
+            piece_counts[piece].append(ip)
+
+    sorted_pieces = sorted(piece_counts.items(), key=lambda x: len(x[1]))
+
+    return sorted_pieces
+
+def download_rarest_first(output_directory, torrent_file_name):  
+
+    from concurrent.futures import ThreadPoolExecutor
+    executors = ThreadPoolExecutor(max_workers=5)
+
+    file_data = read_file(torrent_file_name)
+    decoded_data = Bencode.decode(file_data)
+    meta_info = MetaInfo(decoded_data)
+    tracker = Tracker(meta_info.announce)
+    response = tracker.get_peers(
+        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, meta_info.length, 1
+    )
+    if response.status_code != 200:
+        raise ConnectionError(
+            f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
+        )
+    response_data = response.content
+    decoded_response = Bencode.decode(response_data)
+    peers = decoded_response["peers"]
+
+    for file, peer_addr in peers.items():
+        peers_ip = []
+        for i in range(0, len(peer_addr), 6):
+            peers_ip.append(get_peer_ip(peer_addr[i : i + 6]))
+        
+        peers_data = {}
+        for ip in peers_ip:
+            peer_ip, peer_port = ip.split(":")
+            peer = Peer()
+            peer.connect(peer_ip, int(peer_port))
+            peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
+            indexes_of_pieces = peer.bitfield_listen()
+            peers_data[ip] = indexes_of_pieces
+
+            peer.disconnect()
+        
+        rarest_piece_list = get_rarest_piece_list(peers_data)
+        block_list = {}
+        for piece, list_of_peers in rarest_piece_list.items():
+            random.shuffle(list_of_peers)
+            print(f"Downloading piece {piece} of file {file}")
+
+            idx = len(list_of_peers)
+            executors.submit(handle_download_piece, f"{output_directory}/{file}", torrent_file_name, file, piece, list_of_peers[0])
+
+
+
 
 def handle_download(output_directory, torrent_file_name):
     """Download file(s)
@@ -470,32 +524,35 @@ def handle_download(output_directory, torrent_file_name):
     decoded_response = Bencode.decode(response_data)
     peers = decoded_response["peers"]
     
-    from concurrent.futures import ThreadPoolExecutor
-    executors = ThreadPoolExecutor(max_workers=3)
-    
     for file, peer_addr in peers.items():
-        executors.submit(download_file, file, peer_addr, meta_info, output_directory, torrent_file_name)
+        download_file(file, peer_addr, meta_info, output_directory, torrent_file_name)
         
-    executors.shutdown(wait=True)
         
         
 def download_file(file, peer_addr, meta_info, output_directory, torrent_file_name):
+    from concurrent.futures import ThreadPoolExecutor
+    executors = ThreadPoolExecutor(max_workers=4)
+    
     peer = Peer()
-    peer_ip_port = get_peer_ip(peer_addr[0:6])
-    peer_ip = peer_ip_port.split(":")[0]
-    peer_port = int(peer_ip_port.split(":")[1])
+    peer_ip_port = get_peer_ip(peer_addr[:6]).split(":")
+    peer_ip = peer_ip_port[0]
+    peer_port = int(peer_ip_port[1])
     peer.connect(peer_ip, peer_port)
-    peer.handshake(meta_info.info_hash, MY_PEER_ID)
+    peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
     print(f"FILE: {file} - PIECES: {indexes_of_pieces}")
+
+
+    idx = 0
     for piece in indexes_of_pieces: 
-        lock.acquire()
         print(f"Downloading piece {piece} of file {file}")
-        handle_download_piece(f"{output_directory}/{file}", torrent_file_name, file, piece)
-        lock.release()
+        executors.submit(handle_download_piece, f"{output_directory}/{file}", torrent_file_name, file, piece, idx)
+        idx = (idx + 1) % (len(peer_addr) // 6)
+        
+    executors.shutdown(wait=True)
     
             
-def handle_download_piece(download_directory, torrent_file_name, file, piece):
+def handle_download_piece(download_directory, torrent_file_name, file, piece, idx = 0):
     # extract the meta info from the torrent file
     file_data = read_file(torrent_file_name)
     decoded_data = Bencode.decode(file_data)
@@ -515,11 +572,11 @@ def handle_download_piece(download_directory, torrent_file_name, file, piece):
     peers = decoded_response["peers"]
     # connect to the first peer and send the handshake message
     peer = Peer()
-    peer_ip_port = get_peer_ip(peers[file][0:6])
-    peer_ip = peer_ip_port.split(":")[0]
-    peer_port = int(peer_ip_port.split(":")[1])
+    peer_ip_port = get_peer_ip(peers[file][idx * 6:(idx+1) * 6]).split(":")
+    peer_ip = peer_ip_port[0]
+    peer_port = int(peer_ip_port[1])
     peer.connect(peer_ip, peer_port)
-    peer.handshake(meta_info.info_hash, MY_PEER_ID)
+    peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
 
     if piece not in indexes_of_pieces:
@@ -529,15 +586,18 @@ def handle_download_piece(download_directory, torrent_file_name, file, piece):
 
     if piece == (len(meta_info.pieces) // 20) - 1:
         piece_length = meta_info.length % meta_info.piece_length
+
+    lock.acquire()
     block = peer.request_send(file, piece, piece_length)
-    
     try:
         #append
         with open(f"{download_directory}", "ab") as f:
             f.write(block)
             print(f"Piece {piece} downloaded to {download_directory}")
     except Exception as e:
-        print(e)            
+        print(e) 
+
+    lock.release()           
 
 
 def main():
