@@ -58,7 +58,7 @@ class Seeder:
         conn.send(peer_mess.get_encoded())
 
     def seeding(self, conn, piece_id, offset, block_length):
-        print("Sending...")
+        # print("Sending...")
         message_id = PIECE_ID.to_bytes(1, byteorder="big")
         with open(os.path.join("data", self.key), "rb") as f:
             f.seek(piece_id * PIECE_LENGTH + offset)
