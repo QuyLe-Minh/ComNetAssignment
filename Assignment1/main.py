@@ -18,6 +18,7 @@ PIECE_ID = 7
 CANCEL_ID = 8
 MY_PEER_ID = b"00112233445566778899"    #string of length 20, identifier for client
 BLOCK_SIZE = 2**14  # 16KB
+PIECE_LENGTH = 512 * 1024  # 512KB
 
 lock = threading.Lock()
 
@@ -454,7 +455,7 @@ def get_rarest_piece_list(peers_data):
 def download_rarest_first(output_directory, torrent_file_name):  
 
     from concurrent.futures import ThreadPoolExecutor
-    executors = ThreadPoolExecutor(max_workers=5)
+    executors = ThreadPoolExecutor(max_workers=3)
 
     file_data = read_file(torrent_file_name)
     decoded_data = Bencode.decode(file_data)
@@ -488,13 +489,13 @@ def download_rarest_first(output_directory, torrent_file_name):
             peer.disconnect()
         
         rarest_piece_list = get_rarest_piece_list(peers_data)
-        block_list = {}
+        idx = 0
         for piece, list_of_peers in rarest_piece_list.items():
-            random.shuffle(list_of_peers)
             print(f"Downloading piece {piece} of file {file}")
-
-            idx = len(list_of_peers)
-            executors.submit(handle_download_piece, f"{output_directory}/{file}", torrent_file_name, file, piece, list_of_peers[0])
+            executors.submit(handle_download_piece, f"{output_directory}/{file}", torrent_file_name, file, piece, idx)
+            idx = (idx + 1) % len(list_of_peers)
+        
+        executors.shutdown(wait=True)
 
 
 
@@ -525,13 +526,16 @@ def handle_download(output_directory, torrent_file_name):
     peers = decoded_response["peers"]
     
     for file, peer_addr in peers.items():
+        with open(f'{output_directory}/{file}', 'w') as f:
+            pass
         download_file(file, peer_addr, meta_info, output_directory, torrent_file_name)
         
         
         
 def download_file(file, peer_addr, meta_info, output_directory, torrent_file_name):
+    MAX_WORKERS = 5
     from concurrent.futures import ThreadPoolExecutor
-    executors = ThreadPoolExecutor(max_workers=4)
+    executors = ThreadPoolExecutor(max_workers=MAX_WORKERS)
     
     peer = Peer()
     peer_ip_port = get_peer_ip(peer_addr[:6]).split(":")
@@ -541,13 +545,18 @@ def download_file(file, peer_addr, meta_info, output_directory, torrent_file_nam
     peer.handshake(file, meta_info.info_hash, MY_PEER_ID)
     indexes_of_pieces = peer.bitfield_listen()
     print(f"FILE: {file} - PIECES: {indexes_of_pieces}")
+    
+    n = min(len(peer_addr) // 6, MAX_WORKERS)
 
-
-    idx = 0
+    futures = [None] * n
     for piece in indexes_of_pieces: 
         print(f"Downloading piece {piece} of file {file}")
-        executors.submit(handle_download_piece, f"{output_directory}/{file}", torrent_file_name, file, piece, idx)
-        idx = (idx + 1) % (len(peer_addr) // 6)
+        idx = 0
+        while True:
+            if futures[idx] is None or futures[idx].done():
+                futures[idx] = executors.submit(handle_download_piece, f"{output_directory}/{file}", torrent_file_name, file, piece, idx)
+                break
+            idx = (idx + 1) % n
         
     executors.shutdown(wait=True)
     
@@ -587,17 +596,15 @@ def handle_download_piece(download_directory, torrent_file_name, file, piece, id
     if piece == (len(meta_info.pieces) // 20) - 1:
         piece_length = meta_info.length % meta_info.piece_length
 
-    lock.acquire()
     block = peer.request_send(file, piece, piece_length)
     try:
         #append
-        with open(f"{download_directory}", "ab") as f:
+        with open(f"{download_directory}", "r+b") as f:
+            f.seek(piece * PIECE_LENGTH)
             f.write(block)
             print(f"Piece {piece} downloaded to {download_directory}")
     except Exception as e:
-        print(e) 
-
-    lock.release()           
+        print(e)         
 
 
 def main():

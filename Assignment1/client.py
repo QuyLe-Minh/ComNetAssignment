@@ -22,7 +22,8 @@ class Seeder:
         self.pieces = {"cs229-linalg.pdf": [0],
                        "emnlp2014-depparser.pdf": [0,1],
                        "test.txt": [0],
-                       "swe.pdf": [i for i in range(21)]
+                       "swe.pdf": [i for i in range(21)],
+                       "NLP.pdf": [i for i in range(52)]
                        }
 
         self.key = None

@@ -27,6 +27,7 @@ class Server:
                           "swe.pdf": self.peers[1] + self.peers[4] + self.peers[2] + self.peers[3],
                           "cs229-linalg.pdf": self.peers[2] + self.peers[4],
                           "emnlp2014-depparser.pdf": self.peers[3] + self.peers[0],
+                          "NLP.pdf": self.peers[0] + self.peers[1] + self.peers[3] + self.peers[4] + self.peers[2]
                           }
         
         self.multi_files_hash = {"data": [file for file in os.listdir("data")]}
