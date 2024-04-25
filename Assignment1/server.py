@@ -24,8 +24,8 @@ class Server:
             self.peers.append(socket.inet_aton(get_local_ip()) + struct.pack('!H', port))
 
         self.file_hash = {"test.txt": self.peers[0],
-                          "swe.pdf": self.peers[1] + self.peers[4],
-                          "cs229-linalg.pdf": self.peers[2],
+                          "swe.pdf": self.peers[1] + self.peers[4] + self.peers[2] + self.peers[3],
+                          "cs229-linalg.pdf": self.peers[2] + self.peers[4],
                           "emnlp2014-depparser.pdf": self.peers[3] + self.peers[0],
                           }
         

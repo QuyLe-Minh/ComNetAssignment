@@ -19,9 +19,10 @@ class Seeder:
         self.main_seeder.listen()
         self.MY_PEER_ID = b'-RN0.0.0-Z\xf5\xc2\xcfH\x88\x15\xc4\xa2\xfa\x7f'
         
-        self.pieces = {"cs229-linalg.pdf": [0,1,2],
-                       "emnlp2014-depparser.pdf": [0,1,2,3,4],
-                       "test.txt": [0,1]
+        self.pieces = {"cs229-linalg.pdf": [0],
+                       "emnlp2014-depparser.pdf": [0,1],
+                       "test.txt": [0],
+                       "swe.pdf": [i for i in range(21)]
                        }
 
         self.key = None
@@ -40,17 +41,21 @@ class Seeder:
     def handle_handshake(self, conn):
         request = conn.recv(68)
         conn.sendall(request)
+        key = conn.recv(30)
+        self.key = key.decode()
     
     def bitfield_send(self, conn):
         pieces = self.pieces[self.key]
-        bitfield_send = (len(pieces).to_bytes(4, byteorder="big") + b"\x05")
-        conn.sendall(bitfield_send)
         
-        bitfield = 0
+        bitfield = bytearray(10)    #80 pieces
         for i in pieces:
-            bitfield |= 1 << (7-i)
+            byte_index = i // 8
+            bit_index = i % 8
+            bitfield[byte_index] |= 1 << (7-bit_index)
             
-        conn.send(bitfield.to_bytes(1, byteorder="big"))
+        peer_mess = PeerMessage(BITFIELD_ID.to_bytes(1, byteorder="big"), bitfield)    
+        
+        conn.send(peer_mess.get_encoded())
 
     def seeding(self, conn, piece_id, offset, block_length):
         print("Sending...")
