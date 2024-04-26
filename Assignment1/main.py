@@ -19,7 +19,6 @@ MY_PEER_ID = b"00112233445566778899"    #string of length 20, identifier for cli
 BLOCK_SIZE = 2**14  # 16KB
 PIECE_LENGTH = 512 * 1024  # 512KB
 
-lock = threading.Lock()
 
 class PeerMessage:
     def __init__(self, message_id: bytes, payload: bytes):
@@ -188,7 +187,6 @@ class Peer:
             raise ValueError(f"Invalid message id: {message_id} for bitfield message")
         payload = self.socket.recv(length - 1)
         payload_str = "".join(format(x, "08b") for x in payload)
-        # print(payload_str)
         indexes_of_pieces = [i for i, bit in enumerate(payload_str) if bit == "1"]
         return indexes_of_pieces
     """
@@ -241,7 +239,6 @@ class Peer:
         size_of_block = length - 9
         full_block = b""
         while recieved < size_of_block:
-            # print(f"Recieved: {recieved} - Size: {size_of_block}")
             block = self.socket.recv(size_of_block - recieved)
             full_block += block
             recieved += len(block)
@@ -399,7 +396,6 @@ def handle_info(torrent_file_name):
             file_to_space[file['path'][0].decode()] = file['length']
     print(f"Info Hash: {meta_info.info_hash_hex}")
     print(f"File Name: {meta_info.name.decode()}")
-    # print(f"Info Hash: {meta_info.info_hash}")
     print(f"Piece Length: {meta_info.piece_length}")
 
     
@@ -410,7 +406,6 @@ def handle_info(torrent_file_name):
                 raise ConnectionError(
             f"Failed to get peers! Status Code: {response.status_code}, Reason: {response.reason}"
         )
-    # print(response)
     response_data = response.content
     decoded_response = Bencode.decode(response_data)
     peers = decoded_response["peers"]
@@ -523,18 +518,9 @@ def handle_download_piece(download_directory, meta_info, peers, file, piece, idx
 
 def main():
     command = sys.argv[1]
-    if command == "decode":
-        bencoded_value = sys.argv[2].encode()
-        handle_decode(bencoded_value)
-    elif command == "info":
+    if command == "info":
         torrent_file_name = sys.argv[2]
         handle_info(torrent_file_name)
-    elif command == "download_piece":
-        assert sys.argv[2] == "-o", "Expected -o as the second argument"
-        output_directory = sys.argv[3]  # /tmp/test-piece-0
-        torrent_file_name = sys.argv[4]  # sample.torrent
-        piece = int(sys.argv[5])  # 0
-        handle_download_piece(output_directory, torrent_file_name, piece)
     elif command == "download":
         assert sys.argv[2] == "-o", "Expected -o as the second argument"
         output_directory = sys.argv[3]
