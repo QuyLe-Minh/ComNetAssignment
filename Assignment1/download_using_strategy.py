@@ -1,11 +1,8 @@
-import json
-import os
 import sys
 import hashlib
 import requests
 import socket
 import threading
-import random
 
 CHOKE_ID = 0
 UNCHOKE_ID = 1
@@ -168,9 +165,7 @@ class Peer:
             full_block += block
             recieved += len(block)
         return piece_index, begin, full_block
-    
-    def cancel(self):
-        pass
+
 class MetaInfo:
     def __init__(self, data):
         self.announce = data["announce"]
