@@ -450,7 +450,7 @@ def handle_download(output_directory, torrent_file_name):
         start_time = time.time()
         with tqdm(total = total_size, unit='B', unit_scale=True, desc=file) as pbar:
             def callback():
-                pbar.update(512 * 1024)
+                pbar.update(PIECE_LENGTH)
 
             download_file(file, peer_addr, meta_info, output_directory, callback)
         
