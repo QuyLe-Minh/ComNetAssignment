@@ -3,11 +3,12 @@
 Clone a whole fucking bittorrent from scratch
 
 # Set up
-## 1. Clone my repos
+## 1. Clone my repos and do some setup stuffs
 - Make a cloned of my repository using the following command in git bash: 
 ```sh
 git clone https://github.com/QuyLe-Minh/ComNetAssignment.git
 cd ComNetAssignment/Assignment1
+pip install -r requirements.txt
 ```
 
 ## 2. Create a torrent file
