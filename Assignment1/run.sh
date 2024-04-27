@@ -5,30 +5,38 @@ if [ -d "result" ]; then
 fi
 mkdir "result"
 
-commands=("info" "download" "download_rarest_first")
+commands=("1. Info" "2. Download" "3. Download_rarest_first" "4. Exit")
 
-# Print the list of commands
-echo "Available commands:"
-for command in "${commands[@]}"; do
-    echo "  $command"
+while true; do
+    echo "Available commands:"
+    for command in "${commands[@]}"; do
+        echo "  $command"
+    done
+
+    read -p "Enter command (or 'exit' to quit): " command
+
+    if [ "$command" == "4" ]; then
+        echo "Exiting..."
+        break
+    fi
+
+    case "$command" in
+        "1")
+            read -p "Enter torrent file name: " torrent_file_name
+            python3 main.py info "$torrent_file_name"s
+            ;;
+        "2")
+            read -p "Enter output directory: " output_directory
+            read -p "Enter torrent file name: " torrent_file_name
+            python3 main.py download -o "$output_directory" "$torrent_file_name"
+            ;;
+        "3")
+            read -p "Enter output directory: " output_directory
+            read -p "Enter torrent file name: " torrent_file_name
+            python3 download_using_strategy.py download -o "$output_directory" "$torrent_file_name"
+            ;;
+        *)
+            echo "Unknown command $command"
+            ;;
+    esac
 done
-
-read -p "Enter command: " command
-
-python server.py
-python client.py
-
-if [ "$command" == "info" ]; then
-    read -p "Enter torrent file name: " torrent_file_name
-    python main.py info "$torrent_file_name"
-elif [ "$command" == "download" ]; then
-    read -p "Enter output directory: " output_directory
-    read -p "Enter torrent file name: " torrent_file_name
-    python main.py download -o "$output_directory" "$torrent_file_name"
-elif [ "$command" == "download_rarest_first" ]; then
-    read -p "Enter output directory: " output_directory
-    read -p "Enter torrent file name: " torrent_file_name    
-    python download_using_trategy.py download -o "$output_directory" "$torrent_file_name"
-else
-    echo "Unknown command $command"
-fi
