@@ -3,7 +3,7 @@
 Clone a whole fucking bittorrent from scratch
 
 # Configure parameters
-All your parameters need tuning are in **utilities/__init__.py**. For some computers that can not host SERVER_PORT, simply change there and make some modifications in **tracker.get_peers** function in **main.py** or **download_using_strategy.py**.
+All your parameters need tuning are in **utilities/`__init__`.py**. For some computers that can not host SERVER_PORT, simply change there and make some modifications in **tracker.get_peers** function in **main.py** or **download_using_strategy.py**.
 
 # Workflow
 Server and Seeders will run all the time. They will receive message from Clients and handle it. Because of the complexity of the real-world Bittorrent, we will simplify our system a little bit and summarize it as follows:
