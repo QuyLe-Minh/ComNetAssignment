@@ -2,9 +2,6 @@
 
 Clone a whole fucking bittorrent from scratch
 
-# Configure parameters
-All your parameters need tuning are in **utilities/`__init__`.py**. For some computers that can not host SERVER_PORT, simply change there and make some modifications in **tracker.get_peers** function in **main.py** or **download_using_strategy.py**.
-
 # Workflow
 Server and Seeders will run all the time. They will receive message from Clients and handle it. Because of the complexity of the real-world Bittorrent, we will simplify our system a little bit and summarize it as follows:
 - Server and Seeders start listening.
@@ -24,13 +21,16 @@ cd ComNetAssignment/Assignment1
 pip install -r requirements.txt
 ```
 
-## 2. Create a torrent file
+## 2. Configure parameters
+All your parameters need tuning are in **utilities/`__init__`.py**. For some computers that can not host SERVER_PORT, simply change there and make some modifications in **tracker.get_peers** function in **main.py** or **download_using_strategy.py**.
+
+## 3. Create a torrent file
 - You must make your own torrent file including resources you want to share and send it to clients. In order to do it, you should migrate all your desired files into folder **data** and run:
 ```sh
 python test.py
 ```
 
-## 3. Simulate a bittorrent operations
+## 4. Simulate a bittorrent operations
 - Just run the following code and follow the instructions:
 ```sh
 chmod +x run.sh
@@ -51,5 +51,5 @@ or
 ```sh
 python download_using_trategy.py download -o /path/to/result/folder /path/to/your/torrent
 ```
-## 4. Result
+## 5. Result
 You are all done. Bittorrent and chill !!
