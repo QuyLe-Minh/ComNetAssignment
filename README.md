@@ -2,6 +2,19 @@
 
 Clone a whole fucking bittorrent from scratch
 
+# Configure parameters
+All your parameters need tuning are in **utilities/__init__.py**. For some computers that can not host SERVER_PORT, simply change there and make some modifications in **tracker.get_peers** function in **main.py** or **download_using_strategy.py**.
+
+# Workflow
+Server and Seeders will run all the time. They will receive message from Clients and handle it. Because of the complexity of the real-world Bittorrent, we will simplify our system a little bit and summarize it as follows:
+- Server and Seeders start listening.
+- Client make requests to Server to get list of active peers.
+- For each file in list_of_files:
++ Make a handshake and get bitfield from list of peers.
++ Generate maximum MAX_WORKERS threads to download MAX_WORKERS pieces concurrently such that thread must connect to exclusive peer that is existed (one-to-one).
+
+In our system, to simplify the system, we ignore some of protocols, such as choke message, unchoke message, have message and vice versa. You should have a look at **main.py** to know details.
+
 # Set up
 ## 1. Clone my repos and do some setup stuffs
 - Make a cloned of my repository using the following command in git bash: 
@@ -24,5 +37,19 @@ chmod +x run.sh
 ./run.sh
 ```
 
+- To experiment the behavior of the system with other computers in the network, you must have at least 2 roles/computers:
++ The first computer must run as a server (and seeders). You will need 2 terminals to run this:
+```sh
+python server.py
+python client.py
+```
++ The second computer acts as a client with only **main.py** or **download_using_strategy.py**. Then run as follows:
+```sh
+python main.py download -o /path/to/result/folder /path/to/your/torrent
+```
+or
+```sh
+python download_using_trategy.py download -o /path/to/result/folder /path/to/your/torrent
+```
 ## 4. Result
-You are all done. Bittorrent and chill.
+You are all done. Bittorrent and chill !!
