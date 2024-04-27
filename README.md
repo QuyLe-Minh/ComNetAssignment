@@ -10,7 +10,7 @@ Server and Seeders will run all the time. They will receive message from Clients
     + Make a handshake and get bitfield from list of peers.
     + Generate maximum MAX_WORKERS threads to download MAX_WORKERS pieces concurrently such that thread must connect to exclusive peer that is existed (one-to-one).
 
-In our system, to simplify, we ignore some of protocols, such as choke message, unchoke message, have message and vice versa. You should have a look at **main.py** to know details.
+In our system, to simplify, we ignore some of protocols, such as choke message, unchoke message, have message and vice versa. You should have a look at `main.py` to know details.
 
 # Set up
 ## 1. Clone my repos and do some setup stuffs
@@ -22,10 +22,10 @@ pip install -r requirements.txt
 ```
 
 ## 2. Configure parameters
-All your parameters need tuning are in **utilities/`__init__`.py**. For some computers that can not host SERVER_PORT, simply change there and make some modifications in **tracker.get_peers** function in **main.py** or **download_using_strategy.py**.
+All your parameters need tuning are in `utilities/__init__.py`. For some computers that can not host SERVER_PORT, simply change there and make some modifications in **tracker.get_peers** function in `main.py` or `download_using_strategy.py`.
 
 ## 3. Create a torrent file
-- You must make your own torrent file including resources you want to share and send it to clients. In order to do it, you should migrate all your desired files into folder **data** and run:
+- You must make your own torrent file including resources you want to share and send it to clients. In order to do it, you should migrate all your desired files into folder `data` and run:
 ```sh
 python test.py
 ```
@@ -43,7 +43,7 @@ chmod +x run.sh
 python server.py
 python client.py
 ```
-+ The second computer acts as a client with only **main.py** or **download_using_strategy.py**. Then run as follows:
++ The second computer acts as a client with only `main.py` or `download_using_strategy.py`. Then run as follows:
 ```sh
 python main.py download -o /path/to/result/folder /path/to/your/torrent
 ```
