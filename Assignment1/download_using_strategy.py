@@ -2,7 +2,6 @@ import sys
 import hashlib
 import requests
 import socket
-import threading
 
 CHOKE_ID = 0
 UNCHOKE_ID = 1
@@ -16,8 +15,6 @@ CANCEL_ID = 8
 MY_PEER_ID = b"00112233445566778899"    #string of length 20, identifier for client
 BLOCK_SIZE = 2**14  # 16KB
 PIECE_LENGTH = 512 * 1024  # 512KB
-
-lock = threading.Lock()
 
 class PeerMessage:
     def __init__(self, message_id: bytes, payload: bytes):

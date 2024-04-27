@@ -1,5 +1,21 @@
 import socket    
 
+class PeerMessage:
+    def __init__(self, message_id: bytes, payload: bytes):
+        self.message_id = message_id
+        self.payload = payload
+        self.message_length_prefix = (len(message_id + payload)).to_bytes(
+            4, byteorder="big"
+        )
+    def get_decoded(self):
+        return {
+            "message_length_prefix": self.message_length_prefix.hex(),
+            "message_id": self.message_id.hex(),
+            "payload": self.payload.hex(),
+        }
+    def get_encoded(self):
+        return self.message_length_prefix + self.message_id + self.payload
+
 def get_local_ip():
     try:
         # Create a socket object and connect to an external server
@@ -9,16 +25,5 @@ def get_local_ip():
         s.close()
         return local_ip
     except socket.error as e:
-        return f"Unable to determine local IP: {str(e)}"     
+        return f"Unable to determine local IP: {str(e)}"            
     
-
-def read_file(file_name):
-    with open(file_name, "rb") as f:
-        return f.read()
-    
-def get_piece_hashes(pieces):
-    return [pieces[i : i + 20].hex() for i in range(0, len(pieces), 20)]
-        
-    
-def get_peer_ip(peer):
-    return f"{peer[0]}.{peer[1]}.{peer[2]}.{peer[3]}:{peer[4]*256 + peer[5]}"    
