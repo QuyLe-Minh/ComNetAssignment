@@ -1,6 +1,8 @@
 from utilities import *
 import threading
 import struct
+import os
+import signal
 
 lock = threading.Lock()
     
@@ -27,6 +29,7 @@ class Seeder:
                        }
 
         self.key = None
+        self.threads = []
     
     def parse_request(self, request):
         protocol_len, = struct.unpack("B", request[:1])
@@ -106,16 +109,32 @@ class Seeder:
                 conn, _ = self.main_seeder.accept()
                 thread = threading.Thread(target=self.handle_client, args=(conn,))
                 thread.start()
-            except:
+                self.threads.append(thread)
+            except KeyboardInterrupt:
+                print("Server is shutting down...")
+                conn.close()
+                for thread in self.threads:
+                    thread.join()
+                os._exit(0)
+            except Exception:
                 pass
-    
-def start_seeder(port):
-    seeder = Seeder(port)
-    seeder.listening()
 
 if __name__ == "__main__":
+    seeders = []
     for port in LOCAL_PORT:
-        thread = threading.Thread(target=start_seeder, args=(port,))
+        seeder = Seeder(port)
+        seeders.append(seeder)
+        thread = threading.Thread(target=seeder.listening)
         thread.start()
+
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        print("Shutting down all seeders...")
+        for seeder in seeders:
+            for thread in seeder.threads:
+                thread.join()
+        os._exit(0)        
  
                      

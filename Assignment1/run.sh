@@ -23,17 +23,15 @@ while true; do
     case "$command" in
         "1")
             read -p "Enter torrent file name: " torrent_file_name
-            python3 main.py info "$torrent_file_name"s
+            python3 main.py info "$torrent_file_name"
             ;;
         "2")
-            read -p "Enter output directory: " output_directory
             read -p "Enter torrent file name: " torrent_file_name
-            python3 main.py download -o "$output_directory" "$torrent_file_name"
+            python3 main.py download -o result "$torrent_file_name"
             ;;
         "3")
-            read -p "Enter output directory: " output_directory
             read -p "Enter torrent file name: " torrent_file_name
-            python3 download_using_strategy.py download -o "$output_directory" "$torrent_file_name"
+            python3 download_using_strategy.py download -o result "$torrent_file_name"
             ;;
         *)
             echo "Unknown command $command"

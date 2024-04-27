@@ -78,7 +78,11 @@ class Server:
                 print("HI CLIENT")
                 thread = threading.Thread(target=self.handle_client_request, args=(conn, addr))
                 thread.start()
-            except:
+            except KeyboardInterrupt:
+                print("Server is shutting down...")
+                conn.close()
+                break
+            except Exception:
                 pass
 
 if __name__=="__main__": 
