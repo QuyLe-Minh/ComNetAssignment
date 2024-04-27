@@ -1,6 +1,6 @@
-# ComNetAssignment
+# Local P2P bittorrent
 
-Clone a whole fucking bittorrent from scratch
+A simple local P2P bittorrent with full operations from scratch, including create torrent files, seeding files and vice versa
 
 # Workflow
 ![System Diagram](https://github.com/QuyLe-Minh/ComNetAssignment/assets/92782164/c5048101-5d25-47ff-ac41-61df7afa6246)
