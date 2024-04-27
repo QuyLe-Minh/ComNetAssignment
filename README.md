@@ -39,19 +39,19 @@ chmod +x run.sh
 ./run.sh
 ```
 
-- To experiment the behavior of the system with other computers in the network, you must have at least 2 roles/computers:
-+ The first computer must run as a server (and seeders). You will need 2 terminals to run this:
-```sh
-python server.py
-python client.py
-```
-+ The second computer acts as a client with only `main.py` or `download_using_strategy.py`. Then run as follows:
-```sh
-python main.py download -o /path/to/result/folder /path/to/your/torrent
-```
-or
-```sh
-python download_using_trategy.py download -o /path/to/result/folder /path/to/your/torrent
-```
+- Or to experiment the behavior of the system with other computers in the network, you must have at least 2 roles/computers:
+    + The first computer must run as a server (and seeders). You will need 2 terminals to run this:
+    ```sh
+    python server.py
+    python client.py
+    ```
+    + The second computer acts as a client with only `main.py` or `download_using_strategy.py`. Then run as follows:
+    ```sh
+    python main.py download -o /path/to/result/folder /path/to/your/torrent
+    ```
+    or
+    ```sh
+    python download_using_trategy.py download -o /path/to/result/folder /path/to/your/torrent
+    ```
 ## 5. Result
 You are all done. Bittorrent and chill !!
