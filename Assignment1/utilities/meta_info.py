@@ -126,6 +126,7 @@ def create_torrent_file(directory, tracker):
     # Create the file dictionary for each file
     file_dicts = []
     for file in files:
+        print(file)
         file_size = os.path.getsize(os.path.join(directory, file))
         file_dicts.append({'length': file_size, 'path': [file]})
 

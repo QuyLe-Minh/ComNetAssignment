@@ -82,9 +82,6 @@ class Server:
                 pass
 
 if __name__=="__main__": 
-    ip = get_local_ip()
-    create_torrent_file("data", f"http://{ip}:{SERVER_PORT}/announce")
-         
     server = Server()
     server.listening()
                 
