@@ -16,7 +16,7 @@ In our system, to simplify, we ignore some of protocols, such as choke message, 
 
 # Set up
 ## 1. Clone my repos and do some setup stuffs
-- Make a cloned of my repository using the following command in git bash: 
+- Make a cloned of my repository using the following command: 
 ```sh
 git clone https://github.com/QuyLe-Minh/ComNetAssignment.git
 cd ComNetAssignment/Assignment1
