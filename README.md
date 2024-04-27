@@ -47,11 +47,11 @@ chmod +x run.sh
     ```
     + The second computer acts as a client with only `main.py` or `download_using_strategy.py`. Then run as follows:
     ```sh
-    python main.py download -o /path/to/result/folder /path/to/your/torrent
+    python main.py download -o /path/to/your/destination /path/to/your/torrent
     ```
     or
     ```sh
-    python download_using_trategy.py download -o /path/to/result/folder /path/to/your/torrent
+    python download_using_trategy.py download -o /path/to/your/destination /path/to/your/torrent
     ```
 ## 5. Result
 You are all done. Bittorrent and chill !!
