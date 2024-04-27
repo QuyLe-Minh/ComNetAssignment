@@ -12,7 +12,7 @@ Server and Seeders will run all the time. They will receive message from Clients
     + Make a handshake and get bitfield from list of peers.
     + Generate maximum MAX_WORKERS threads to download MAX_WORKERS pieces concurrently such that thread must connect to exclusive peer that is existed (one-to-one).
 
-In our system, to simplify, we ignore some of protocols, such as choke message, unchoke message, have message and vice versa. You should have a look at `main.py` to know details.
+In our system, to simplify, we ignore some of protocols, such as choke message, unchoke message, have message, ... and modify request messages form to handle them properly. You should have a look at `main.py` to know details.
 
 # Set up
 ## 1. Clone my repos and do some setup stuffs
