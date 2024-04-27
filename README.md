@@ -3,7 +3,7 @@
 Clone a whole fucking bittorrent from scratch
 
 # Workflow
-![System Diagram](Assignment1\media\diagram.png)
+![System Diagram](https://github.com/QuyLe-Minh/ComNetAssignment/assets/92782164/c5048101-5d25-47ff-ac41-61df7afa6246)
 
 Server and Seeders will run all the time. They will receive message from Clients and handle it. Because of the complexity of the real-world Bittorrent, we will simplify our system a little bit and summarize it as follows:
 - Server and Seeders start listening.
