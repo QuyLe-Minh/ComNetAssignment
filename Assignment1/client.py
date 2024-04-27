@@ -110,31 +110,39 @@ class Seeder:
                 thread = threading.Thread(target=self.handle_client, args=(conn,))
                 thread.start()
                 self.threads.append(thread)
-            except KeyboardInterrupt:
-                print("Server is shutting down...")
-                conn.close()
-                for thread in self.threads:
-                    thread.join()
-                os._exit(0)
-            except Exception:
+            # except KeyboardInterrupt:
+            #     print("Server is shutting down...")
+            #     conn.close()
+            #     for thread in self.threads:
+            #         thread.join()
+            #     os._exit(0)
+            except:
                 pass
+    
+def start_seeder(port):
+    seeder = Seeder(port)
+    seeder.listening()
 
 if __name__ == "__main__":
-    seeders = []
     for port in LOCAL_PORT:
-        seeder = Seeder(port)
-        seeders.append(seeder)
-        thread = threading.Thread(target=seeder.listening)
+        thread = threading.Thread(target=start_seeder, args=(port,))
         thread.start()
+# if __name__ == "__main__":
+#     seeders = []
+#     for port in LOCAL_PORT:
+#         seeder = Seeder(port)
+#         seeders.append(seeder)
+#         thread = threading.Thread(target=seeder.listening)
+#         thread.start()
 
-    try:
-        while True:
-            pass
-    except KeyboardInterrupt:
-        print("Shutting down all seeders...")
-        for seeder in seeders:
-            for thread in seeder.threads:
-                thread.join()
-        os._exit(0)        
+#     try:
+#         while True:
+#             pass
+#     except KeyboardInterrupt:
+#         print("Shutting down all seeders...")
+#         for seeder in seeders:
+#             for thread in seeder.threads:
+#                 thread.join()
+#         os._exit(0)        
  
                      
