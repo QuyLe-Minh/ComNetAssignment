@@ -3,6 +3,7 @@ import hashlib
 import requests
 import socket
 
+SERVER_PORT = 55555
 CHOKE_ID = 0
 UNCHOKE_ID = 1
 INTERESTED_ID = 2
@@ -40,7 +41,7 @@ class Tracker:
         info_hash: bytes,
         peer_id: str,
         name: str, 
-        port: int = 55555,
+        port: int = SERVER_PORT,
         uploaded: int = 0,
         downloaded: int = 0,
         left: int = 0,
@@ -354,7 +355,7 @@ def handle_info(torrent_file_name):
 
     
     response = tracker.get_peers(
-        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, 55555, 0, 0, 10, 1
+        meta_info.info_hash, MY_PEER_ID.decode(), meta_info.name, SERVER_PORT, 0, 0, 10, 1
     )
     if response.status_code != 200:
                 raise ConnectionError(
