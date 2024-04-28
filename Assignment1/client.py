@@ -15,7 +15,7 @@ class Seeder:
         
         lock.acquire()
         print(f"Seeder IP: {my_ip}")
-        print(f"Server is listening on port {port}...")
+        print(f"Seeder is listening on port {port}...")
         lock.release()
         self.main_seeder.settimeout(1)
         self.main_seeder.listen()
@@ -29,7 +29,7 @@ class Seeder:
                        }
 
         self.key = None
-        self.threads = []
+        # self.threads = []
     
     def parse_request(self, request):
         protocol_len, = struct.unpack("B", request[:1])
@@ -109,7 +109,7 @@ class Seeder:
                 conn, _ = self.main_seeder.accept()
                 thread = threading.Thread(target=self.handle_client, args=(conn,))
                 thread.start()
-                self.threads.append(thread)
+                # self.threads.append(thread)
             # except KeyboardInterrupt:
             #     print("Server is shutting down...")
             #     conn.close()
