@@ -20,6 +20,7 @@ In our system, to simplify, we ignore some of protocols, such as choke message, 
 ```sh
 git clone https://github.com/QuyLe-Minh/ComNetAssignment.git
 cd ComNetAssignment/Assignment1
+code .
 pip install -r requirements.txt
 ```
 
