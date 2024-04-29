@@ -34,11 +34,11 @@ class Server:
         
     def add_peer(self, addr, file_name):
         ip, port = addr
-        print(ip, port)
         peer = socket.inet_aton(ip) + struct.pack('!H', port)
         self.file_hash[file_name] += peer
         
     def handle_get_request(self, conn, addr, request):
+        print(addr)
         GET_request = request.split(" ")[1]
         name = GET_request.split('&')[-1]
         file_name = name.split('=')[-1]
@@ -58,6 +58,7 @@ class Server:
             "incomplete": self.incomplete,
             "interval": self.interval,
             "min_interval": self.min_interval,
+            "address": socket.inet_aton(addr[0]) + struct.pack('!H', addr[1]),
             "peers": peers  # peers is dictionary no matter how many files
         }        
         

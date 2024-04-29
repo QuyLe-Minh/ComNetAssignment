@@ -35,13 +35,13 @@ def get_local_ip_port():
         return f"Unable to determine local IP: {str(e)}"  
 
 class Seeder:
-    def __init__(self):
-        my_ip, my_port = get_local_ip_port()
+    def __init__(self, port):
+        my_ip, _ = get_local_ip_port()
         self.main_seeder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.main_seeder.bind((my_ip, my_port)) 
+        self.main_seeder.bind((my_ip, port)) 
         
         print(f"Seeder IP: {my_ip}")
-        print(f"Seeder is listening on port {my_port}...")
+        print(f"Seeder is listening on port {port}...")
         self.main_seeder.settimeout(1)
         self.main_seeder.listen()
         self.MY_PEER_ID = b'-RN0.0.0-Z\xf5\xc2\xcfH\x88\x15\xc4\xa2\xfa\x7f'
@@ -140,8 +140,8 @@ class Seeder:
             except:
                 pass
     
-def start_seeder():
-    seeder = Seeder()
+def start_seeder(port):
+    seeder = Seeder(port)
     seeder.listening()
 
 
@@ -533,6 +533,7 @@ def handle_info(torrent_file_name):
         )
     response_data = response.content
     decoded_response = Bencode.decode(response_data)
+    MY_PORT = get_peer_ip(decoded_response["address"]).split(":")[1]
     peers = decoded_response["peers"]
     for file, peer_addr in peers.items():
         peers_ip = []
@@ -541,7 +542,7 @@ def handle_info(torrent_file_name):
         
         print(f"File {file}: {peers_ip}")
     
-    return (peers, meta_info, file_to_space)
+    return (peers, meta_info, file_to_space, MY_PORT)
 
 def get_peer_ip(peer):
     return f"{peer[0]}.{peer[1]}.{peer[2]}.{peer[3]}:{peer[4]*256 + peer[5]}"
@@ -554,7 +555,7 @@ def handle_download(output_directory, torrent_file_name):
         torrent_file_name
     """
     import time
-    peers, meta_info, file_to_space = handle_info(torrent_file_name) 
+    peers, meta_info, file_to_space, my_port = handle_info(torrent_file_name) 
     
     print("=====================================")
     
@@ -581,7 +582,7 @@ def handle_download(output_directory, torrent_file_name):
     print(f"Total time taken: {total_time_taken} seconds")
     
     if SEED_AFTER_DOWNLOAD:
-        start_seeder()
+        start_seeder(int(my_port))
         
         
         
@@ -656,5 +657,6 @@ def main():
         handle_download(output_directory, torrent_file_name)
     else:
         raise NotImplementedError(f"Unknown command {command}")
+    
 if __name__ == "__main__":
     main()
