@@ -38,7 +38,7 @@ python test.py
     + The first computer must run as a server (and seeders). You will need 2 terminals to run this:
     ```sh
     python3 server.py
-    python3 client.py
+    python3 seeder.py
     ```
     + The second computer acts as a client with only `main.py` or `download_using_strategy.py`. Then run bash script and follow the instructions:
     ```sh
