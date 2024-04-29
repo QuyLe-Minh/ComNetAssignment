@@ -20,6 +20,7 @@ In our system, to simplify, we ignore some of protocols, such as choke message, 
 ```sh
 git clone https://github.com/QuyLe-Minh/ComNetAssignment.git
 cd ComNetAssignment/Assignment1
+code .
 pip install -r requirements.txt
 ```
 
@@ -33,25 +34,16 @@ python test.py
 ```
 
 ## 4. Simulate a bittorrent operations
-- Just run the following code and follow the instructions:
-```sh
-chmod +x run.sh
-./run.sh
-```
-
-- Or to experiment the behavior of the system with other computers in the network, you must have at least 2 roles/computers:
+- To experiment the behavior of the system with other computers in the network, you must have at least 2 roles:
     + The first computer must run as a server (and seeders). You will need 2 terminals to run this:
     ```sh
-    python server.py
-    python client.py
+    python3 server.py
+    python3 client.py
     ```
-    + The second computer acts as a client with only `main.py` or `download_using_strategy.py`. Then run as follows:
+    + The second computer acts as a client with only `main.py` or `download_using_strategy.py`. Then run bash script and follow the instructions:
     ```sh
-    python main.py download -o /path/to/your/destination /path/to/your/torrent
-    ```
-    or
-    ```sh
-    python download_using_trategy.py download -o /path/to/your/destination /path/to/your/torrent
+    chmod +x run.sh
+    ./run.sh
     ```
 ## 5. Result
 You are all done. Bittorrent and chill !!
