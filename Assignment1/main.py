@@ -8,6 +8,7 @@ import threading
 import struct
 import os
 
+SEED_AFTER_DOWNLOAD = True
 SERVER_PORT = 55555
 CHOKE_ID = 0
 UNCHOKE_ID = 1
@@ -579,7 +580,8 @@ def handle_download(output_directory, torrent_file_name):
     total_time_taken = time.time() - total_start
     print(f"Total time taken: {total_time_taken} seconds")
     
-    start_seeder()
+    if SEED_AFTER_DOWNLOAD:
+        start_seeder()
         
         
         

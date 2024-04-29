@@ -34,6 +34,7 @@ class Server:
         
     def add_peer(self, addr, file_name):
         ip, port = addr
+        print(ip, port)
         peer = socket.inet_aton(ip) + struct.pack('!H', port)
         self.file_hash[file_name] += peer
         
